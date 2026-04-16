@@ -3,6 +3,7 @@
 # Usage: ./scripts/issue-to-prompt.sh <issue_number>
 
 REPO="Mankuy/ops-dashboard"
+REPO_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 ISSUE_NUM="$1"
 
 if [ -z "$ISSUE_NUM" ]; then
@@ -15,51 +16,41 @@ fi
 
 echo "📥 Fetching issue #$ISSUE_NUM..."
 
-# Get issue details
-ISSUE_JSON=$(gh issue view "$ISSUE_NUM" --repo "$REPO" --json title,body,labels)
-TITLE=$(echo "$ISSUE_JSON" | jq -r '.title')
-BODY=$(echo "$ISSUE_JSON" | jq -r '.body')
-LABELS=$(echo "$ISSUE_JSON" | jq -r '.labels[].name' | tr '\n' ', ')
+# Get issue details (use gh's built-in formatting)
+ISSUE_TITLE=$(gh issue view "$ISSUE_NUM" --repo "$REPO" --json title --jq '.title' 2>/dev/null || \
+              gh issue view "$ISSUE_NUM" --repo "$REPO" | head -1 | sed 's/.*title: //')
+ISSUE_BODY=$(gh issue view "$ISSUE_NUM" --repo "$REPO" --json body --jq '.body' 2>/dev/null || \
+             gh issue view "$ISSUE_NUM" --repo "$REPO" | tail -n +10)
 
 # Generate codebase context
 echo "📦 Generating codebase context..."
-repomix --style markdown --compress --output /tmp/dashboard-context.md "$(dirname "$0")/.."
+repomix --style markdown --compress --output /tmp/dashboard-context.md "$REPO_DIR"
 
 # Build the prompt
 PROMPT_FILE="/tmp/issue-${ISSUE_NUM}-prompt.md"
 
 cat > "$PROMPT_FILE" << EOF
-# GitHub Issue #${ISSUE_NUM}: ${TITLE}
+# GitHub Issue #${ISSUE_NUM}: ${ISSUE_TITLE}
 
 ## Issue Description
-${BODY}
-
-## Labels
-${LABELS:-none}
+${ISSUE_BODY}
 
 ## Codebase Context
-$(head -100 /tmp/dashboard-context.md)
+\`\`\`
+$(head -80 /tmp/dashboard-context.md)
+\`\`\`
 
 ## Your Task
 Based on the issue description above and the codebase context:
 
 1. **Analyze**: What is the root cause or requirement?
 2. **Plan**: Write a step-by-step implementation plan
-3. **Implement**: Make the necessary changes
-4. **Validate**: Ensure nothing breaks (check JS syntax, test in browser)
+3. **Implement**: Make the necessary changes in \`dashboard.html\`
+4. **Validate**: Run \`node --check\` on extracted JS
 
 Remember: This is a single-file HTML/CSS/JS dashboard. All changes go in \`dashboard.html\`.
 EOF
 
 echo "✅ Prompt saved to: $PROMPT_FILE"
 echo "📋 Preview:"
-head -20 "$PROMPT_FILE"
-
-# Copy to clipboard if available
-if command -v xclip &>/dev/null; then
-  xclip -selection clipboard < "$PROMPT_FILE"
-  echo "📋 Copied to clipboard!"
-elif command -v pbcopy &>/dev/null; then
-  pbcopy < "$PROMPT_FILE"
-  echo "📋 Copied to clipboard!"
-fi
+head -25 "$PROMPT_FILE"
