@@ -792,37 +792,90 @@ function renderProjects() {
   syncProjectSelects();
 }
 
+let currentProjectPrompt = null;
+
 function copyPromptForProject(id) {
   const p = projects.find(x => x.id === id);
   if (!p) return;
+  currentProjectPrompt = p;
   
-  // Build a rich prompt with project context
+  // Set modal info
+  const info = document.getElementById('project-prompt-info');
+  const statusEmoji = p.status === 'active' ? '🟢' : p.status === 'dev' ? '🟡' : '✅';
+  info.innerHTML = `<strong style="color:${p.color||'var(--blue)'}">${p.emoji||''} ${p.name}</strong> ${statusEmoji}<br>
+    <span style="color:var(--text3)">${p.desc||''}</span>`;
+  
+  // Set placeholder based on project
+  const textarea = document.getElementById('project-prompt-request');
+  textarea.value = '';
+  textarea.placeholder = p.claudePrompt 
+    ? 'Ej: ' + p.claudePrompt.replace('[DESCRIBIR QUÉ]', 'agregar modo oscuro').substring(0, 80) + '...'
+    : '¿Qué querés hacer con ' + p.name + '?';
+  
+  openModal('modal-project-prompt');
+}
+
+function generateSuperPrompt() {
+  const p = currentProjectPrompt;
+  if (!p) return;
+  
+  const request = document.getElementById('project-prompt-request').value.trim();
+  if (!request) { showToast('Escribí lo que querés hacer'); return; }
+  
+  const tone = document.getElementById('project-prompt-tone').value;
+  const includeContext = document.getElementById('project-prompt-context').checked;
+  
+  const toneMap = {
+    casual: '',
+    technical: 'Con detalle técnico y ejemplos de código: ',
+    creative: 'Pensalo de forma creativa, explorá opciones distintas: ',
+    concise: 'Respuesta directa, solo lo esencial: '
+  };
+  
+  // Build the SUPER PROMPT
   let prompt = '';
   
-  // Header with project info
-  prompt += `# Proyecto: ${p.name}\n`;
-  prompt += `Estado: ${p.status === 'active' ? '🟢 Activo' : p.status === 'dev' ? '🟡 En desarrollo' : '✅ Finalizado'}\n`;
+  // Section 1: Project Identity
+  prompt += `═══════════════════════════════════════\n`;
+  prompt += `PROYECTO: ${p.name}\n`;
+  prompt += `═══════════════════════════════════════\n\n`;
+  
+  const statusEmoji = p.status === 'active' ? '🟢 Activo' : p.status === 'dev' ? '🟡 En desarrollo' : '✅ Finalizado';
+  prompt += `Estado: ${statusEmoji}\n`;
   prompt += `Descripción: ${p.desc}\n`;
   if (p.tags && p.tags.length) prompt += `Stack: ${p.tags.join(', ')}\n`;
+  if (p.url) prompt += `URL en vivo: ${p.url}\n`;
   if (p.repoUrl) prompt += `Repo: ${p.repoUrl}\n`;
-  if (p.url) prompt += `URL: ${p.url}\n`;
   prompt += '\n';
   
-  // Include the custom prompt or a default one
-  if (p.claudePrompt) {
-    prompt += `## Tu tarea\n${p.claudePrompt}\n\n`;
-  } else {
-    prompt += `## Tu tarea\nAyudame con este proyecto. ¿Qué necesitás saber?\n\n`;
+  // Section 2: Context instruction
+  if (includeContext && p.repoUrl) {
+    prompt += `═══════════════════════════════════════\n`;
+    prompt += `CONTEXTO DEL REPO\n`;
+    prompt += `═══════════════════════════════════════\n\n`;
+    prompt += `Para ver TODO el código del repo, andá a:\n`;
+    prompt += `https://gitingest.com/?url=${p.repoUrl}\n\n`;
+    prompt += `Copiá todo el resultado y pegalo en tu próximo mensaje.\n\n`;
   }
   
-  // Add context instructions
-  prompt += `## Instrucciones\n`;
-  prompt += `- Trabajá directo, sin relleno\n`;
-  if (p.repoUrl) prompt += `- Si necesitás ver el código, pedime que genere el contexto con el botón "📄 Contexto Repo" y te lo pego\n`;
-  prompt += `- Respondé en español\n`;
+  // Section 3: The actual task
+  prompt += `═══════════════════════════════════════\n`;
+  prompt += `TU TAREA\n`;
+  prompt += `═══════════════════════════════════════\n\n`;
+  prompt += (toneMap[tone] || '') + request + '\n\n';
   
-  copyText(prompt, '📋 Prompt copiado — pegalo en Claude');
-  addOfficeParticles(400, 300, p.color || '#58a6ff');
+  // Section 4: Rules
+  prompt += `═══════════════════════════════════════\n`;
+  prompt += `REGLAS\n`;
+  prompt += `═══════════════════════════════════════\n\n`;
+  prompt += `- Respondé en español\n`;
+  prompt += `- Directo, sin relleno ni introducciones\n`;
+  prompt += `- Si necesitás ver código, decime y te lo pego\n`;
+  prompt += `- Si hay varias opciones, comparalas rápido\n`;
+  prompt += `- Si el cambio es chico, damelo directo para copiar\n`;
+  
+  copyText(prompt, '✨ Super Prompt copiado — pegalo en Claude');
+  closeModal('modal-project-prompt');
 }
 
 function copyRepoContext(repoUrl) {
