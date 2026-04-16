@@ -682,7 +682,7 @@ desc:'Psicólogo Uruguayo. Contenido sobre relaciones, violencia de género, div
     desc:'Panel de control central. Proyectos, prompts, costos, oficina pixel art con agentes IA. Single-file HTML/JS, sin frameworks.',
     tags:['HTML Canvas','Pixel Art','AI Agents','Single-file','WSL'],
     url:'', repoUrl:'https://github.com/Mankuy/ops-dashboard', docsUrl:'',
-    claudePrompt:'Estoy trabajando en el Dashboard Ops (D:/CLAUDE/dashboard.html). Repo: https://github.com/Mankuy/ops-dashboard. Para generar contexto: cd ops-dashboard && repomix --compress. Para issues: gh issue view <N> --repo Mankuy/ops-dashboard. Metodología PRP en .claude/commands/. Quiero: [DESCRIBIR QUÉ].',
+    claudePrompt:'Estoy trabajando en el Dashboard Ops (D:/CLAUDE/dashboard.html, ~2100 líneas). Es un single-file HTML/CSS/JS sin frameworks. Tenés tabs: Proyectos, Pedidos, Costos, Oficina Pixel Art (canvas 960×480 con agentes IA animados). Repo: https://github.com/Mankuy/ops-dashboard. Quiero: [DESCRIBIR QUÉ].',
     hermesCmd:'cd /mnt/d/CLAUDE/ops-dashboard && ./scripts/context.sh /tmp/dash-context.md && hermes chat "Leé /tmp/dash-context.md y decime qué se puede mejorar en el dashboard"' },
 ];
 
@@ -763,6 +763,7 @@ function renderProjects() {
         <div class="action-row">
           <span class="action-lbl" title="Copiá y pegá en Claude">Claude</span>
           <button class="btn btn-claude" onclick="copyPromptForProject('${p.id}')">💬 Pedir a Claude</button>
+          ${p.repoUrl ? `<button class="btn btn-ghost" onclick="copyRepoContext('${p.repoUrl}')">📄 Contexto Repo</button>` : ''}
           ${hasUrl ? `<button class="btn btn-ghost" onclick="window.open('${p.url}')">↗ Ver sitio</button>` : ''}
         </div>
         ${hasHermes ? `<div class="action-row">
@@ -793,8 +794,43 @@ function renderProjects() {
 
 function copyPromptForProject(id) {
   const p = projects.find(x => x.id === id);
-  if (!p || !p.claudePrompt) return;
-  copyText(p.claudePrompt, 'Prompt para Claude copiado — pegalo en el chat');
+  if (!p) return;
+  
+  // Build a rich prompt with project context
+  let prompt = '';
+  
+  // Header with project info
+  prompt += `# Proyecto: ${p.name}\n`;
+  prompt += `Estado: ${p.status === 'active' ? '🟢 Activo' : p.status === 'dev' ? '🟡 En desarrollo' : '✅ Finalizado'}\n`;
+  prompt += `Descripción: ${p.desc}\n`;
+  if (p.tags && p.tags.length) prompt += `Stack: ${p.tags.join(', ')}\n`;
+  if (p.repoUrl) prompt += `Repo: ${p.repoUrl}\n`;
+  if (p.url) prompt += `URL: ${p.url}\n`;
+  prompt += '\n';
+  
+  // Include the custom prompt or a default one
+  if (p.claudePrompt) {
+    prompt += `## Tu tarea\n${p.claudePrompt}\n\n`;
+  } else {
+    prompt += `## Tu tarea\nAyudame con este proyecto. ¿Qué necesitás saber?\n\n`;
+  }
+  
+  // Add context instructions
+  prompt += `## Instrucciones\n`;
+  prompt += `- Trabajá directo, sin relleno\n`;
+  if (p.repoUrl) prompt += `- Si necesitás ver el código, pedime que genere el contexto con el botón "📄 Contexto Repo" y te lo pego\n`;
+  prompt += `- Respondé en español\n`;
+  
+  copyText(prompt, '📋 Prompt copiado — pegalo en Claude');
+  addOfficeParticles(400, 300, p.color || '#58a6ff');
+}
+
+function copyRepoContext(repoUrl) {
+  // Open gitingest.com which generates full repo context for AI
+  // User copies the output and pastes in Claude
+  const ingestUrl = `https://gitingest.com/?url=${repoUrl}`;
+  window.open(ingestUrl, '_blank');
+  showToast('📄 Abrí Gitingest — copiá el resultado y pegalo en Claude');
 }
 
 function copyHermesCmd(id) {
