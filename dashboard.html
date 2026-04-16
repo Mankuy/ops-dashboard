@@ -1,0 +1,2118 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ops Dashboard</title>
+<style>
+:root {
+  --bg:#0d1117; --bg2:#161b22; --bg3:#21262d; --bg4:#2d333b;
+  --border:#30363d; --border2:#444c56;
+  --text:#e6edf3; --text2:#8b949e; --text3:#484f58;
+  --green:#3fb950; --yellow:#d29922; --red:#f85149; --blue:#58a6ff;
+  --purple:#bc8cff; --orange:#f97316;
+  --claude:#f97316; --hermes:#7c3aed;
+  --radius:8px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+a{color:var(--blue);text-decoration:none}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:13px;background:var(--bg3);border:1px solid var(--border);color:var(--text);border-radius:6px;padding:8px 10px;outline:none;transition:border-color .15s}
+input:focus,select:focus,textarea:focus{border-color:var(--blue)}
+select option{background:var(--bg3)}
+textarea{resize:vertical;min-height:72px}
+
+/* ── HEADER ── */
+.header{background:var(--bg2);border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;gap:20px;position:sticky;top:0;z-index:200;height:54px}
+.header-logo{font-size:20px}
+.header h1{font-size:16px;font-weight:600;white-space:nowrap}
+.tabs{display:flex;gap:2px;margin-left:16px}
+.tab{background:none;border:none;color:var(--text2);padding:8px 14px;border-radius:6px;font-size:13px;font-weight:500;transition:all .15s}
+.tab:hover{color:var(--text);background:var(--bg3)}
+.tab.active{color:var(--text);background:var(--bg3)}
+.header-date{color:var(--text2);font-size:12px;margin-left:auto;white-space:nowrap}
+
+/* ── TAB PANES ── */
+.tab-pane{display:none;padding:28px 32px;max-width:1200px;margin:0 auto;animation:fadeIn .2s}
+.tab-pane.active{display:block}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+
+/* ── SECTION TITLE ── */
+.section-title{font-size:11px;font-weight:600;letter-spacing:1.2px;text-transform:uppercase;color:var(--text2);margin:32px 0 14px;display:flex;align-items:center;gap:10px}
+.section-title:first-child{margin-top:0}
+.section-title::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ── GRID ── */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:14px}
+
+/* ── CARDS ── */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;display:flex;flex-direction:column;transition:border-color .2s}
+.card:hover{border-color:var(--border2)}
+.card-header{padding:15px 16px 12px;border-bottom:1px solid var(--border)}
+.card-title-row{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+.card-emoji{font-size:17px}
+.card-title{font-size:14px;font-weight:600;flex:1}
+.card-desc{font-size:12px;color:var(--text2);line-height:1.45}
+.card-tags{padding:8px 16px;display:flex;flex-wrap:wrap;gap:5px;border-bottom:1px solid var(--border)}
+.tag{background:var(--bg3);border:1px solid var(--border);padding:2px 7px;border-radius:4px;font-size:11px;color:var(--text2)}
+.card-actions{padding:10px 16px;display:flex;flex-direction:column;gap:8px;flex:1}
+.action-row{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.action-lbl{font-size:10px;letter-spacing:.8px;text-transform:uppercase;color:var(--text3);min-width:50px;flex-shrink:0}
+.card-controls{padding:8px 16px 12px;display:flex;gap:6px;border-top:1px solid var(--border);margin-top:auto}
+
+/* ── BADGES ── */
+.badge{font-size:10px;font-weight:600;padding:2px 8px;border-radius:20px;white-space:nowrap}
+.badge.green{background:rgba(63,185,80,.15);color:var(--green)}
+.badge.yellow{background:rgba(210,153,34,.15);color:var(--yellow)}
+.badge.red{background:rgba(248,81,73,.15);color:var(--red)}
+.badge.grey{background:rgba(139,148,158,.12);color:var(--text2)}
+
+/* ── BUTTONS ── */
+.btn{font-size:12px;font-weight:500;padding:5px 11px;border:1px solid transparent;border-radius:6px;transition:all .15s;white-space:nowrap;line-height:1.4}
+.btn-primary{background:var(--blue);color:#000;border-color:var(--blue)}
+.btn-primary:hover{background:#79baff}
+.btn-ghost{background:var(--bg3);border-color:var(--border);color:var(--text2)}
+.btn-ghost:hover{color:var(--text);border-color:var(--border2)}
+.btn-claude{background:rgba(249,115,22,.12);border-color:rgba(249,115,22,.3);color:var(--claude)}
+.btn-claude:hover{background:rgba(249,115,22,.2)}
+.btn-hermes{background:rgba(124,58,237,.12);border-color:rgba(124,58,237,.3);color:var(--purple)}
+.btn-hermes:hover{background:rgba(124,58,237,.2)}
+.btn-danger{background:rgba(248,81,73,.1);border-color:rgba(248,81,73,.3);color:var(--red)}
+.btn-danger:hover{background:rgba(248,81,73,.2)}
+.btn.copied,.ask-pill.copied{background:rgba(63,185,80,.15)!important;border-color:rgba(63,185,80,.4)!important;color:var(--green)!important}
+.btn-sm{font-size:11px;padding:3px 8px}
+.btn-icon{padding:5px 8px;font-size:13px}
+
+/* ── ADD PROJECT CARD ── */
+.add-card{background:var(--bg2);border:1px dashed var(--border2);border-radius:10px;display:flex;align-items:center;justify-content:center;min-height:160px;cursor:pointer;transition:all .2s;color:var(--text3);font-size:13px;gap:8px;flex-direction:column}
+.add-card:hover{border-color:var(--blue);color:var(--blue);background:rgba(88,166,255,.04)}
+.add-card .add-icon{font-size:24px;opacity:.5}
+
+/* ── MODAL ── */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:500;align-items:center;justify-content:center}
+.modal-overlay.open{display:flex}
+.modal-box{background:var(--bg2);border:1px solid var(--border);border-radius:12px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;padding:24px;position:relative}
+.modal-title{font-size:16px;font-weight:600;margin-bottom:20px}
+.modal-close{position:absolute;top:16px;right:16px;background:none;border:none;color:var(--text2);font-size:18px;line-height:1;cursor:pointer}
+.modal-close:hover{color:var(--text)}
+.form-group{margin-bottom:14px}
+.form-group label{display:block;font-size:11px;letter-spacing:.8px;text-transform:uppercase;color:var(--text2);margin-bottom:5px;font-weight:600}
+.form-group input,.form-group select,.form-group textarea{width:100%}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)}
+
+/* ── COSTS ── */
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px}
+.stat-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:16px}
+.stat-label{font-size:11px;color:var(--text2);letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px}
+.stat-value{font-size:24px;font-weight:700;color:var(--text)}
+.stat-sub{font-size:11px;color:var(--text2);margin-top:2px}
+
+.session-table{width:100%;border-collapse:collapse;font-size:12px}
+.session-table th{background:var(--bg3);padding:8px 12px;text-align:left;font-size:10px;letter-spacing:.8px;text-transform:uppercase;color:var(--text2);border-bottom:1px solid var(--border)}
+.session-table td{padding:9px 12px;border-bottom:1px solid var(--border);color:var(--text2);vertical-align:middle}
+.session-table td:first-child{color:var(--text)}
+.session-table tr:last-child td{border-bottom:none}
+.session-table tr:hover td{background:rgba(255,255,255,.02)}
+.table-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden}
+
+.prices-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px}
+.price-card{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+.price-name{font-weight:600;margin-bottom:6px;font-size:13px}
+.price-row{display:flex;justify-content:space-between;font-size:12px;color:var(--text2);margin-bottom:2px}
+.price-row span:last-child{font-family:'SF Mono','Consolas',monospace;color:var(--purple)}
+
+/* ── PROMPT GENERATOR ── */
+.prompt-layout{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+@media(max-width:768px){.prompt-layout{grid-template-columns:1fr}}
+.prompt-builder{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:20px}
+.prompt-builder h3{font-size:13px;font-weight:600;margin-bottom:16px;color:var(--text2)}
+.prompt-output{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:14px;font-size:12px;line-height:1.6;color:var(--text);min-height:120px;white-space:pre-wrap;font-family:'SF Mono','Consolas',monospace;margin:12px 0}
+.prompt-output.empty{color:var(--text3);font-family:inherit;font-size:13px;display:flex;align-items:center;justify-content:center;font-style:italic}
+.quick-ask-box{background:var(--bg2);border:1px solid var(--border);border-radius:10px;padding:16px}
+.quick-ask-box h3{font-size:12px;font-weight:600;margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.qa-explain{font-size:11px;color:var(--text3);margin-bottom:10px;line-height:1.4}
+.ask-pills{display:flex;flex-direction:column;gap:5px}
+.ask-pill{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:8px 11px;font-size:12px;color:var(--text2);cursor:pointer;text-align:left;font-family:inherit;transition:all .15s;display:flex;justify-content:space-between;align-items:center;gap:8px;line-height:1.35}
+.ask-pill:hover{border-color:var(--border2);color:var(--text)}
+.pill-arrow{opacity:.35;font-size:10px;flex-shrink:0}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
+.dot.claude{background:var(--claude)}
+.dot.hermes{background:var(--purple)}
+.fabric-link{background:var(--bg2);border:1px solid var(--border);border-radius:8px;padding:12px 14px;display:flex;align-items:flex-start;gap:10px;margin-bottom:8px;text-decoration:none;transition:border-color .15s}
+.fabric-link:hover{border-color:var(--border2)}
+.fabric-link .fl-icon{font-size:20px;flex-shrink:0;margin-top:1px}
+.fabric-link .fl-name{font-size:13px;font-weight:600;color:var(--text);margin-bottom:2px}
+.fabric-link .fl-desc{font-size:11px;color:var(--text2);line-height:1.4}
+.fabric-link .fl-stars{font-size:11px;color:var(--yellow);margin-top:3px}
+
+/* ── CANVAS OFFICE ── */
+#office-wrap{background:var(--bg2);border:1px solid var(--border);border-radius:10px;overflow:hidden;position:relative}
+#office-canvas{display:block;width:100%;image-rendering:pixelated}
+.office-legend{display:flex;flex-wrap:wrap;gap:10px;padding:14px 16px;border-top:1px solid var(--border)}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text2)}
+.legend-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.office-controls{padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:8px;align-items:center}
+.activity-feed{background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:12px;max-height:160px;overflow-y:auto;font-size:12px}
+.activity-item{padding:4px 0;border-bottom:1px solid var(--border);color:var(--text2);display:flex;gap:8px;align-items:baseline}
+.activity-item:last-child{border-bottom:none}
+.activity-item .ai-name{font-weight:600;font-size:11px;flex-shrink:0}
+.activity-time{font-size:10px;color:var(--text3);margin-left:auto;flex-shrink:0}
+
+/* ── TOAST ── */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:var(--bg3);border:1px solid var(--border);color:var(--text);padding:10px 18px;border-radius:8px;font-size:13px;z-index:999;transition:transform .25s cubic-bezier(.2,0,.2,1);pointer-events:none;white-space:nowrap;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+.toast.show{transform:translateX(-50%) translateY(0)}
+
+/* ── HAMBURGER MENU ── */
+.hamburger{display:none;background:none;border:none;color:var(--text);font-size:22px;cursor:pointer;padding:4px 8px;line-height:1}
+.nav-mobile-open .tabs{display:flex !important}
+
+/* ── TOKEN PANEL (HEADER) ── */
+.token-panel{margin-left:auto;display:flex;align-items:center;gap:10px;white-space:nowrap}
+.token-total{font-size:12px;color:var(--text2);font-weight:600}
+.token-total span{color:var(--green);font-family:'SF Mono','Consolas',monospace}
+.token-quick-btns{display:flex;gap:4px}
+.token-quick-btn{background:var(--bg3);border:1px solid var(--border);border-radius:5px;padding:3px 8px;font-size:10px;color:var(--text2);cursor:pointer;transition:all .15s}
+.token-quick-btn:hover{border-color:var(--border2);color:var(--text)}
+.token-mini-chart{display:flex;align-items:flex-end;gap:2px;height:24px}
+.token-mini-bar{width:6px;border-radius:2px 2px 0 0;background:var(--green);min-height:2px;transition:height .3s}
+.token-mini-bar:nth-child(1){opacity:.5}
+.token-mini-bar:nth-child(2){opacity:.6}
+.token-mini-bar:nth-child(3){opacity:.7}
+.token-mini-bar:nth-child(4){opacity:.75}
+.token-mini-bar:nth-child(5){opacity:.8}
+.token-mini-bar:nth-child(6){opacity:.9}
+.token-mini-bar:nth-child(7){opacity:1}
+
+/* ── OFFICE BOTTOM BAR ── */
+.office-bottom-bar{display:flex;gap:8px;padding:10px 16px;border-top:1px solid var(--border);background:var(--bg2)}
+.office-bottom-bar .btn{flex:1;justify-content:center;display:flex;align-items:center;gap:6px}
+
+/* ── PROMPT VARIABLE HIGHLIGHT ── */
+.var-highlight{background:rgba(210,153,34,.2);color:var(--yellow);padding:1px 4px;border-radius:3px;font-weight:600}
+.prompt-output .var-highlight{background:rgba(210,153,34,.25);color:var(--yellow)}
+
+/* ── IA SELECTOR ── */
+.ia-selector{display:flex;gap:6px;margin-bottom:12px}
+.ia-option{background:var(--bg3);border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:11px;color:var(--text2);cursor:pointer;transition:all .15s;display:flex;align-items:center;gap:5px}
+.ia-option:hover{border-color:var(--border2);color:var(--text)}
+.ia-option.active{border-color:var(--blue);color:var(--blue);background:rgba(88,166,255,.08)}
+
+/* ── MISC ── */
+.empty-state{color:var(--text3);text-align:center;padding:40px 20px;font-size:13px}
+.model-tag{background:var(--bg3);border:1px solid var(--border);padding:2px 7px;border-radius:4px;font-size:11px;font-family:'SF Mono','Consolas',monospace;color:var(--purple)}
+hr.divider{border:none;border-top:1px solid var(--border);margin:20px 0}
+.info-box{background:rgba(88,166,255,.08);border:1px solid rgba(88,166,255,.2);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--text2);line-height:1.5}
+.warn-box{background:rgba(210,153,34,.08);border:1px solid rgba(210,153,34,.2);border-radius:8px;padding:12px 14px;font-size:12px;color:var(--yellow);line-height:1.5}
+
+/* ════════ RESPONSIVE / MOBILE ════════ */
+@media(max-width:768px){
+  .header{padding:0 14px;gap:10px;flex-wrap:wrap;height:auto;min-height:50px}
+  .header h1{font-size:14px}
+  .hamburger{display:block}
+  .tabs{display:none;flex-direction:column;width:100%;gap:4px;padding:8px 0;border-top:1px solid var(--border)}
+  .header.nav-mobile-open .tabs{display:flex}
+  .header-date{display:none}
+  .token-panel{margin-left:0;flex-wrap:wrap;gap:6px}
+  .token-mini-chart{display:none}
+  .tab-pane{padding:16px}
+  .grid{grid-template-columns:1fr}
+  .prompt-layout{grid-template-columns:1fr}
+  .form-row{grid-template-columns:1fr}
+  .stat-grid{grid-template-columns:1fr 1fr}
+  .prices-grid{grid-template-columns:1fr}
+  .session-table{font-size:11px}
+  .office-bottom-bar{flex-wrap:wrap}
+  .office-bottom-bar .btn{flex:1 1 45%}
+  .modal-box{max-width:95%;margin:10px}
+  .ia-selector{flex-wrap:wrap}
+}
+</style>
+</head>
+<body>
+
+<!-- ════════════ HEADER ════════════ -->
+<header class="header" id="main-header">
+  <span class="header-logo">⚡</span>
+  <h1>Ops Dashboard</h1>
+  <button class="hamburger" id="hamburger-btn" onclick="toggleMobileNav()" aria-label="Abrir menú">☰</button>
+  <nav class="tabs" id="main-nav">
+    <button class="tab active" onclick="switchTab('projects',this)">🏠 Proyectos</button>
+    <button class="tab" onclick="switchTab('prompts',this)">💬 Pedidos</button>
+    <button class="tab" onclick="switchTab('costs',this)">💰 Costos</button>
+    <button class="tab" onclick="switchTab('office',this)">🎮 Oficina Pixel Art 🟡</button>
+  </nav>
+  <div class="token-panel" id="token-panel">
+    <div class="token-total" id="token-total-display">Gastado: <span>$0.00</span></div>
+    <div class="token-quick-btns" id="token-quick-btns">
+      <button class="token-quick-btn" onclick="quickAddSession('claude-sonnet')" title="Agregar sesión Claude">+Claude</button>
+      <button class="token-quick-btn" onclick="quickAddSession('minimax-m2')" title="Agregar sesión Hermes">+Hermes</button>
+      <button class="token-quick-btn" onclick="quickAddSession('grok-2')" title="Agregar sesión Grok">+Grok</button>
+    </div>
+    <div class="token-mini-chart" id="token-mini-chart" title="Gastos últimos 7 días"></div>
+  </div>
+  <div class="header-date" id="hdate"></div>
+</header>
+
+<!-- ════════════ TAB: PROYECTOS ════════════ -->
+<div id="tab-projects" class="tab-pane active">
+  <div class="section-title">Mis proyectos</div>
+  <div class="grid" id="projects-grid"></div>
+</div>
+
+<!-- ════════════ TAB: PEDIDOS ════════════ -->
+<div id="tab-prompts" class="tab-pane">
+  <div class="section-title">Generador de prompts</div>
+  <div class="prompt-layout">
+
+    <div>
+      <div class="prompt-builder">
+        <h3>🛠️ Armá tu pedido</h3>
+        <div class="ia-selector" id="ia-selector">
+          <button class="ia-option active" data-ia="claude" onclick="selectIA(this)"><span class="dot claude"></span> Claude</button>
+          <button class="ia-option" data-ia="hermes" onclick="selectIA(this)"><span class="dot hermes"></span> Hermes</button>
+          <button class="ia-option" data-ia="grok" onclick="selectIA(this)" style="color:var(--blue)"><span class="dot" style="background:var(--blue)"></span> Grok</button>
+          <button class="ia-option" data-ia="minimax" onclick="selectIA(this)" style="color:var(--purple)"><span class="dot" style="background:var(--purple)"></span> MiniMax</button>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Proyecto</label>
+            <select id="pg-project"></select>
+          </div>
+          <div class="form-group">
+            <label>Tarea</label>
+            <select id="pg-task">
+              <option value="feature">Agregar algo nuevo</option>
+              <option value="fix">Arreglar un bug</option>
+              <option value="content">Generar contenido</option>
+              <option value="analyze">Analizar / revisar</option>
+              <option value="improve">Mejorar lo que hay</option>
+              <option value="document">Documentar</option>
+              <option value="research">Investigar tema</option>
+              <option value="idea">Evaluar idea nueva</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Tono</label>
+          <select id="pg-tone">
+            <option value="casual">Casual (como hablo normalmente)</option>
+            <option value="technical">Técnico (con detalle y contexto)</option>
+            <option value="creative">Creativo (libre, exploratorio)</option>
+            <option value="concise">Directo (corto y al punto)</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Qué querés hacer — explicalo con tus palabras</label>
+          <textarea id="pg-context" placeholder="Ej: Quiero agregar un botón que exporte la lista de discos a PDF..."></textarea>
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-primary" onclick="generatePrompt()">✨ Generar prompt</button>
+          <button class="btn btn-ghost" onclick="clearPrompt()">Limpiar</button>
+        </div>
+        <div id="prompt-output" class="prompt-output empty">El prompt generado aparece acá...</div>
+        <div style="display:flex;gap:8px" id="prompt-output-actions" style="display:none">
+          <button class="btn btn-ghost" id="btn-copy-prompt" onclick="copyGeneratedPrompt()">📋 Copiar prompt</button>
+          <button class="btn btn-ghost btn-sm" onclick="saveCurrentPrompt()">💾 Guardar plantilla</button>
+        </div>
+      </div>
+
+      <div class="section-title" style="margin-top:20px">Mis plantillas guardadas</div>
+      <div id="saved-prompts-list"></div>
+    </div>
+
+    <div>
+      <div class="section-title" style="margin-top:0">Quick Ask — Preguntas frecuentes</div>
+      <div class="quick-ask-box" style="margin-bottom:12px">
+        <h3><span class="dot claude"></span> Para Claude Code</h3>
+        <p class="qa-explain">Copiás, pegás en este chat.</p>
+        <div class="ask-pills" id="claude-pills"></div>
+      </div>
+      <div class="quick-ask-box" style="margin-bottom:20px">
+        <h3><span class="dot hermes"></span> Para Hermes (terminal I7pro)</h3>
+        <p class="qa-explain">Copiás, pegás en la terminal.</p>
+        <div class="ask-pills" id="hermes-pills"></div>
+      </div>
+
+      <div class="section-title">Herramientas recomendadas (GitHub)</div>
+      <a class="fabric-link" href="https://github.com/danielmiessler/fabric" target="_blank">
+        <span class="fl-icon">🧵</span>
+        <div>
+          <div class="fl-name">fabric — danielmiessler/fabric</div>
+          <div class="fl-desc">200+ "patterns" (prompts curados) para tareas concretas: resumir, analizar, mejorar prompts, red-teaming. Tiene API REST local.</div>
+          <div class="fl-stars">⭐ 40k+ stars · MIT License</div>
+        </div>
+      </a>
+      <a class="fabric-link" href="https://github.com/agenta-ai/agenta" target="_blank">
+        <span class="fl-icon">🎛️</span>
+        <div>
+          <div class="fl-name">Agenta — agenta-ai/agenta</div>
+          <div class="fl-desc">Gestión completa de prompts con versionado tipo Git, playground, evaluación y observabilidad. Self-hosted vía Docker.</div>
+          <div class="fl-stars">⭐ 4k+ stars · Apache 2.0</div>
+        </div>
+      </a>
+      <a class="fabric-link" href="https://github.com/promptfoo/promptfoo" target="_blank">
+        <span class="fl-icon">🧪</span>
+        <div>
+          <div class="fl-name">promptfoo — promptfoo/promptfoo</div>
+          <div class="fl-desc">Testing y evaluación de prompts. Compara respuestas entre modelos (Claude, GPT, Gemini). Genera reportes HTML.</div>
+          <div class="fl-stars">⭐ 17k+ stars · MIT License</div>
+        </div>
+      </a>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ TAB: COSTOS ════════════ -->
+<div id="tab-costs" class="tab-pane">
+  <div class="section-title">Resumen de uso</div>
+  <div class="stat-grid" id="cost-stats"></div>
+
+  <div class="section-title">Registrar sesión</div>
+  <div class="prompt-builder" style="max-width:560px">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Fecha</label>
+        <input type="date" id="s-date">
+      </div>
+      <div class="form-group">
+        <label>Modelo de IA</label>
+        <select id="s-model">
+          <option value="claude-sonnet">Claude Sonnet (4.5/4.6)</option>
+          <option value="claude-haiku">Claude Haiku 3.5</option>
+          <option value="claude-opus">Claude Opus 4</option>
+          <option value="minimax-m2">MiMo-v2-Pro (Hermes)</option>
+          <option value="grok-2">Grok-2</option>
+          <option value="custom">Otro</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Tokens de entrada (input)</label>
+        <input type="number" id="s-input" placeholder="Ej: 50000">
+      </div>
+      <div class="form-group">
+        <label>Tokens de salida (output)</label>
+        <input type="number" id="s-output" placeholder="Ej: 10000">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Proyecto</label>
+        <select id="s-project"></select>
+      </div>
+      <div class="form-group">
+        <label>Descripción (opcional)</label>
+        <input type="text" id="s-desc" placeholder="Qué hice en esta sesión">
+      </div>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center">
+      <button class="btn btn-primary" onclick="addSession()">+ Registrar</button>
+      <span id="s-preview" style="font-size:12px;color:var(--text2)"></span>
+    </div>
+  </div>
+
+  <div class="section-title">Historial de sesiones</div>
+  <div class="table-wrap" style="margin-bottom:24px">
+    <table class="session-table">
+      <thead><tr><th>Fecha</th><th>Modelo</th><th>Proyecto</th><th>Descripción</th><th>Input</th><th>Output</th><th>Costo</th><th></th></tr></thead>
+      <tbody id="sessions-tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="section-title">Precios de referencia (por 1M tokens)</div>
+  <div class="prices-grid" id="prices-grid"></div>
+
+  <div class="section-title">Herramientas útiles</div>
+  <div style="display:flex;flex-direction:column;gap:8px">
+    <a href="https://console.anthropic.com/settings/usage" target="_blank" class="fabric-link">
+      <span class="fl-icon">📊</span>
+      <div>
+        <div class="fl-name">Anthropic Console — Usage</div>
+        <div class="fl-desc">Ver uso real de tokens y costos en tiempo real desde la consola de Anthropic.</div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<!-- ════════════ TAB: OFICINA PIXEL ART ════════════ -->
+<div id="tab-office" class="tab-pane">
+  <div class="section-title">Oficina Pixel Art — Vista Retro</div>
+  <div class="info-box" style="margin-bottom:12px">
+    <strong>Click en cualquier escritorio</strong> para pedirle algo a ese agente. También podés visitar la cafetería o el baño.
+  </div>
+  <div id="office-wrap" style="position:relative">
+    <canvas id="office-canvas" width="960" height="480"></canvas>
+    <div class="office-controls">
+      <button class="btn btn-ghost btn-sm" id="btn-pause-office" onclick="toggleOffice()">⏸ Pausar</button>
+      <span style="font-size:11px;color:var(--text3);margin-left:8px">Click en un área para interactuar</span>
+    </div>
+    <div class="office-legend" id="office-legend"></div>
+  </div>
+  <div class="section-title">Actividad reciente</div>
+  <div class="activity-feed" id="activity-feed"></div>
+  <div class="office-bottom-bar" style="background:#111;padding:10px 16px;border-radius:0 0 10px 10px;display:flex;gap:10px;margin-top:8px">
+    <button class="btn btn-sm" style="background:#22c55e;color:#000;font-weight:600" onclick="openReportModal()">📋 Reportar</button>
+    <button class="btn btn-sm" style="background:#22c55e;color:#000;font-weight:600" onclick="startCall()">📞 Llamada</button>
+    <button class="btn btn-sm" style="background:#6b7280;color:#fff;font-weight:600" onclick="openSettingsModal()">⚙️ Settings</button>
+  </div>
+</div>
+
+<!-- ════════════ MODAL: AGENT REQUEST ════════════ -->
+<div class="modal-overlay" id="modal-agent-request">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('modal-agent-request')">✕</button>
+    <div class="modal-title" id="modal-agent-title">Pedirle a Claude</div>
+    <div class="form-group">
+      <label>¿Qué querés pedirle a este agente?</label>
+      <textarea id="agent-request-text" rows="3" placeholder="Escribí lo que necesitás..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>Tono</label>
+      <select id="agent-request-tone">
+        <option value="casual">Casual</option>
+        <option value="technical">Técnico</option>
+        <option value="creative">Creativo</option>
+        <option value="concise">Directo</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-agent-request')">Cancelar</button>
+      <button class="btn btn-primary" onclick="generateAgentPrompt()">✨ Generar y copiar prompt</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ MODAL: CAFÉ ════════════ -->
+<div class="modal-overlay" id="modal-coffee">
+  <div class="modal-box" style="text-align:center">
+    <div style="font-size:48px;margin-bottom:12px">☕</div>
+    <div class="modal-title">El agente se toma un café</div>
+    <p style="color:var(--text2);margin-bottom:16px">El agente está recargando energías…<br>¿Qué le pedimos cuando vuelva?</p>
+    <textarea id="coffee-request" rows="2" placeholder="Dejale un pedido para cuando vuelva..." style="width:100%;margin-bottom:12px"></textarea>
+    <div class="modal-actions" style="justify-content:center;border:none;padding-top:0">
+      <button class="btn btn-primary" onclick="closeCoffeeModal()">✅ Listo, ya tomó café</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ MODAL: BAÑO ════════════ -->
+<div class="modal-overlay" id="modal-bathroom">
+  <div class="modal-box" style="text-align:center">
+    <div style="font-size:48px;margin-bottom:12px">🚽</div>
+    <div class="modal-title">El agente fue al baño</div>
+    <p style="color:var(--text2);margin-bottom:16px">El agente está en el baño…<br>Volverá en un momento.</p>
+    <div class="modal-actions" style="justify-content:center;border:none;padding-top:0">
+      <button class="btn btn-primary" onclick="closeBathroomModal()">✅ Listo, ya volvió</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ MODAL: REPORTAR ════════════ -->
+<div class="modal-overlay" id="modal-report">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('modal-report')">✕</button>
+    <div class="modal-title">📋 Reportar un problema</div>
+    <div class="form-group">
+      <label>Agente</label>
+      <select id="report-agent"></select>
+    </div>
+    <div class="form-group">
+      <label>Descripción del problema</label>
+      <textarea id="report-desc" rows="3" placeholder="¿Qué pasó?"></textarea>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-report')">Cancelar</button>
+      <button class="btn btn-primary" onclick="submitReport()">Enviar reporte</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ MODAL: SETTINGS OFICINA ════════════ -->
+<div class="modal-overlay" id="modal-settings">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('modal-settings')">✕</button>
+    <div class="modal-title">⚙️ Ajustes de la oficina</div>
+    <div class="form-group">
+      <label>Velocidad de animación</label>
+      <select id="office-speed" onchange="setOfficeSpeed(this.value)">
+        <option value="0.5">Lenta</option>
+        <option value="1" selected>Normal</option>
+        <option value="2">Rápida</option>
+      </select>
+    </div>
+    <div class="form-group" style="display:flex;align-items:center;gap:10px">
+      <input type="checkbox" id="auto-pause" checked>
+      <label style="margin:0;text-transform:none;letter-spacing:0;font-size:13px">Pausar al cambiar de pestaña</label>
+    </div>
+    <div class="form-group" style="display:flex;align-items:center;gap:10px">
+      <input type="checkbox" id="show-particles" checked onchange="toggleParticles(this.checked)">
+      <label style="margin:0;text-transform:none;letter-spacing:0;font-size:13px">Mostrar partículas</label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" onclick="closeModal('modal-settings')">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════ MODAL: PROYECTO ════════════ -->
+<div class="modal-overlay" id="modal-project">
+  <div class="modal-box">
+    <button class="modal-close" onclick="closeModal('modal-project')">✕</button>
+    <div class="modal-title" id="modal-project-title">Agregar proyecto</div>
+    <input type="hidden" id="mp-id">
+    <div class="form-row">
+      <div class="form-group">
+        <label>Emoji</label>
+        <input type="text" id="mp-emoji" placeholder="🚀" maxlength="2" style="font-size:20px;text-align:center">
+      </div>
+      <div class="form-group">
+        <label>Nombre</label>
+        <input type="text" id="mp-name" placeholder="Mi Proyecto">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Estado</label>
+        <select id="mp-status">
+          <option value="active">🟢 Activo</option>
+          <option value="finished">✅ Finalizado</option>
+          <option value="dev">🟡 En desarrollo</option>
+          <option value="paused">🔴 Pausado</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>URL del sitio (opcional)</label>
+        <input type="text" id="mp-url" placeholder="https://...">
+      </div>
+    </div>
+    <div class="form-group">
+      <label>Descripción corta (una oración)</label>
+      <textarea id="mp-desc" rows="2" placeholder="Qué hace este proyecto..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>Stack / tecnologías (separadas por coma)</label>
+      <input type="text" id="mp-tags" placeholder="Firebase, GitHub Pages, Python">
+    </div>
+    <div class="form-group">
+      <label>Prompt de Claude (para el botón de pedidos)</label>
+      <textarea id="mp-claude-prompt" rows="3" placeholder="Contexto que Claude necesita saber para trabajar en este proyecto..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>Comando de Hermes (opcional)</label>
+      <input type="text" id="mp-hermes-cmd" placeholder="hermes chat &quot;...&quot;">
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-project')">Cancelar</button>
+      <button class="btn btn-danger btn-sm" id="btn-delete-project" onclick="deleteCurrentProject()" style="margin-right:auto;display:none">🗑️ Eliminar</button>
+      <button class="btn btn-primary" onclick="saveProject()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════
+// DATA & STORAGE
+// ═══════════════════════════════════════════
+
+const DB = {
+  get: (k, d) => { try { return JSON.parse(localStorage.getItem('ops_'+k)) ?? d; } catch { return d; } },
+  set: (k, v) => localStorage.setItem('ops_'+k, JSON.stringify(v))
+};
+
+const MODEL_PRICES = {
+  'claude-sonnet': { name: 'Claude Sonnet 4.x', input: 3, output: 15, color: '#f97316' },
+  'claude-haiku':  { name: 'Claude Haiku 3.5',  input: 0.8, output: 4, color: '#60a5fa' },
+  'claude-opus':   { name: 'Claude Opus 4',     input: 15, output: 75, color: '#a855f7' },
+  'minimax-m2':    { name: 'MiMo-v2-Pro (Hermes)', input: 0, output: 0, color: '#7c3aed' },
+  'grok-2':        { name: 'Grok-2',            input: 2, output: 10, color: '#3b82f6' },
+  'custom':        { name: 'Otro',              input: 0, output: 0, color: '#8b949e' },
+};
+
+const DEFAULT_PROJECTS = [
+  { id:'vincularmente', emoji:'🧠', name:'Vincularmente', status:'active',
+desc:'Psicólogo Uruguayo. Contenido sobre relaciones, violencia de género, diversidad, espiritualidad, Gestalt, plantas maestras y psicología social. Ebooks curados en Hotmart.',
+    tags:['Hermes','MiMo-v2-Pro','Grok','GitHub Pages','Hotmart'],
+    url:'', repoUrl:'', docsUrl:'http://localhost:8000/projects/vincularmente/overview/',
+    claudePrompt:'Revisá el pipeline de contenido de Vincularmente. El knowledge base está en D:/CLAUDE/operations/prompts/vincularmente/. Decime qué mejorarías.',
+    hermesCmd:'hermes chat "Generá 5 ideas de tweet para Vincularmente sobre psicología y relaciones"' },
+  { id:'cuentos', emoji:'🎙️', name:'Cuentos sin Fronteras', status:'dev',
+    desc:'Podcast de audio para niños de 4-8 años en español. Voces generadas con ElevenLabs, masterización con FFmpeg. 3 episodios publicados.',
+    tags:['ElevenLabs','FFmpeg','Python','-14 LUFS'],
+    url:'', repoUrl:'', docsUrl:'http://localhost:8000/projects/cuentos-sin-fronteras/overview/',
+    claudePrompt:'Quiero escribir un nuevo episodio de Cuentos sin Fronteras (niños 4-8, español). Leé el estilo en D:/CLAUDE/operations/prompts/cuentos-sin-fronteras/narration-style.md y ayudame con el guion.',
+    hermesCmd:'' },
+  { id:'jardin', emoji:'🌿', name:'Jardín', status:'finished',
+    desc:'Base de datos de variedades de cannabis. +1500 strains con info detallada. App web conectada a Firebase.',
+    tags:['Firebase','GitHub Pages','Firestore'],
+    url:'', repoUrl:'', docsUrl:'http://localhost:8000/projects/jardin/overview/',
+    claudePrompt:'Tengo la app Jardín, base de datos de cannabis strains (+1500 entradas) en Firebase (registro-gastos-8a864) con GitHub Pages. Quiero mejorar: [DESCRIBIR QUÉ].',
+    hermesCmd:'' },
+  { id:'registro-gastos', emoji:'💰', name:'Registro de Gastos', status:'finished',
+    desc:'App privada para registrar y organizar gastos personales. Firebase + GitHub Pages, accesible desde cualquier dispositivo.',
+    tags:['Firestore','GitHub Pages','Firebase Auth'],
+    url:'', repoUrl:'', docsUrl:'http://localhost:8000/projects/registro-gastos/overview/',
+    claudePrompt:'Tengo una app de registro de gastos en Firebase (registro-gastos-8a864) con GitHub Pages. Quiero mejorar: [DESCRIBIR QUÉ].',
+    hermesCmd:'' },
+  { id:'brota', emoji:'🌱', name:'Brota', status:'dev',
+    desc:'App SaaS con sistema de planes (free/pago). Login con email, cobro con Lemon Squeezy. Diseño oscuro y elegante. Código en ~/brota-app/.',
+    tags:['Firebase','Lemon Squeezy','JS Vanilla','WSL'],
+    url:'', repoUrl:'', docsUrl:'http://localhost:8000/projects/brota/overview/',
+    claudePrompt:'Estoy desarrollando Brota, una app SaaS. El código está en ~/brota-app/ (WSL Ubuntu). Stack: HTML/JS vanilla, Firebase Auth, Lemon Squeezy para pagos. Siguiente paso: [DESCRIBIR QUÉ].',
+    hermesCmd:'' },
+  { id:'gonza-discos', emoji:'🎵', name:'Gonza Discos', status:'dev',
+    desc:'Tienda de vinilos para Gonzalo. El admin identifica discos con IA (foto → datos automáticos) y la gente compra por WhatsApp.',
+    tags:['Cloudflare Workers','Supabase','Discogs API','Pollinations'],
+    url:'https://gonzalodiscos.facundo-galetta.workers.dev/', repoUrl:'',
+    docsUrl:'http://localhost:8000/projects/gonza-discos/overview/',
+    claudePrompt:'Tengo la app Gonza Discos en C:/Users/facun/.claude/APP DISCOS/index.html (~1700 líneas). Stack: Supabase, Discogs API, Pollinations para identificar discos con foto, checkout por WhatsApp. Quiero mejorar: [DESCRIBIR QUÉ].',
+    hermesCmd:'' },
+  { id:'seomachine', emoji:'📈', name:'Seomachine', status:'active',
+    desc:'Pipeline de SEO para Vincularmente. Investiga qué busca la gente, escribe artículos optimizados y los publica en GitHub Pages.',
+    tags:['Claude Code','DataForSEO','GA4','Search Console','Python'],
+    url:'', repoUrl:'', docsUrl:'http://localhost:8000/projects/seomachine/overview/',
+    claudePrompt:'Abrí el workspace ~/seomachine/ y ayudame con: [DESCRIBIR QUÉ]. Usá los comandos /research, /write o /optimize según corresponda.',
+    hermesCmd:'cd ~/seomachine && python research_trending.py' },
+  { id:'dashboard', emoji:'🖥️', name:'Dashboard Ops', status:'active',
+    desc:'Panel de control central. Proyectos, prompts, costos, oficina pixel art con agentes IA. Single-file HTML/JS, sin frameworks.',
+    tags:['HTML Canvas','Pixel Art','AI Agents','Single-file','WSL'],
+    url:'', repoUrl:'https://github.com/FacundoGaletta/ops-dashboard', docsUrl:'',
+    claudePrompt:'Estoy trabajando en el Dashboard Ops (D:/CLAUDE/dashboard.html, ~2100 líneas). Es un single-file HTML/CSS/JS sin dependencias. Tiene tabs: Proyectos, Pedidos, Costos, y una oficina pixel art con agentes IA (Claude, Grok, Hermes, Gemini). Quiero: [DESCRIBIR QUÉ].',
+    hermesCmd:'hermes chat "Mirá el dashboard en D:/CLAUDE/dashboard.html y decime qué se puede mejorar"' },
+];
+
+const CLAUDE_PILLS = [
+  { label:'¿Cómo están todos mis proyectos?', prompt:'Revisá el estado de todos mis proyectos en D:/CLAUDE/operations/ y decime cuál necesita más atención ahora mismo. Leé los changelogs y los overviews.' },
+  { label:'Documentar una decisión que tomé', prompt:'Necesito documentar una decisión que tomé. Usá el template en D:/CLAUDE/operations/decisions/template.md y creame una entrada. La decisión fue: [DESCRIBIR].' },
+  { label:'Resumen de este mes', prompt:'Leé todos los changelogs en D:/CLAUDE/operations/projects/*/changelog.md y haceme un resumen de qué pasó en los últimos 30 días.' },
+  { label:'Evaluar una idea nueva de proyecto', prompt:'Tengo una idea nueva: [DESCRIBIR]. ¿Tiene potencial? ¿Stack recomendado? ¿Cuánto tiempo para un MVP?' },
+  { label:'Actualizar el knowledge base', prompt:'Corré python D:/CLAUDE/operations/scripts/ops_editor.py project list y decime qué archivos del knowledge base están desactualizados.' },
+];
+
+const HERMES_PILLS = [
+  { label:'¿Qué tareas automáticas están corriendo?', cmd:'hermes chat "¿Cuáles son los crons activos y cuándo corrieron por última vez?"' },
+  { label:'Generar ideas de contenido', cmd:'hermes chat "Generá 5 ideas de contenido para Vincularmente sobre psicología y relaciones humanas. Que tengan potencial viral."' },
+  { label:'Correr el investigador de tweets ahora', cmd:'python ~/.hermes/cron/tweet_research.py' },
+  { label:'¿Qué borradores están listos para publicar?', cmd:'hermes chat "Revisá ~/seomachine/drafts/ y decime qué artículos están listos para publicar en Vincularmente"' },
+  { label:'¿Cómo le fue a Vincularmente esta semana?', cmd:'hermes chat "Analizá el rendimiento de Vincularmente esta semana: engagement, seguidores, mejores tweets"' },
+];
+
+const PROMPT_TEMPLATES = {
+  feature:   (proj, tone, ctx) => `${tonePrefix(tone)}Estoy trabajando en ${proj}. Quiero agregar una funcionalidad nueva: ${ctx || '[DESCRIBIR]'}. Ayudame a implementarla paso a paso.`,
+  fix:       (proj, tone, ctx) => `${tonePrefix(tone)}En el proyecto ${proj} tengo un problema: ${ctx || '[DESCRIBIR EL BUG]'}. Ayudame a encontrar la causa y solucionarlo.`,
+  content:   (proj, tone, ctx) => `${tonePrefix(tone)}Para ${proj}, necesito generar contenido. ${ctx || '[DESCRIBIR QUÉ CONTENIDO]'}. Tené en cuenta el tono y el público del proyecto.`,
+  analyze:   (proj, tone, ctx) => `${tonePrefix(tone)}Revisá el estado actual de ${proj}: ${ctx || '[QUÉ QUERÉS QUE REVISE]'}. Decime qué está bien, qué mejorarías y cuál sería el próximo paso.`,
+  improve:   (proj, tone, ctx) => `${tonePrefix(tone)}Quiero mejorar algo en ${proj}: ${ctx || '[DESCRIBIR QUÉ]'}. Proponé opciones concretas con pros y contras de cada una.`,
+  document:  (proj, tone, ctx) => `${tonePrefix(tone)}Necesito documentar algo de ${proj}: ${ctx || '[QUÉ DOCUMENTAR]'}. Usá el formato del knowledge base en D:/CLAUDE/operations/ y mantenelo en tono casual.`,
+  research:  (proj, tone, ctx) => `${tonePrefix(tone)}Investigá el siguiente tema para ${proj}: ${ctx || '[TEMA]'}. Quiero entender el panorama actual, las mejores opciones disponibles y cuál me recomendás para mi caso.`,
+  idea:      (proj, tone, ctx) => `${tonePrefix(tone)}Tengo una idea para ${proj}: ${ctx || '[DESCRIBIR IDEA]'}. ¿Es viable? ¿Cómo la encaramos? Dame una estimación de esfuerzo y qué habría que hacer para un primer prototipo.`,
+};
+
+function tonePrefix(tone) {
+  const prefixes = {
+    casual: '', technical: 'Con detalle técnico y ejemplos concretos: ', creative: 'Pensalo de forma abierta y creativa: ', concise: 'Respuesta directa y al punto: '
+  };
+  return prefixes[tone] || '';
+}
+
+// ═══════════════════════════════════════════
+// PROJECTS
+// ═══════════════════════════════════════════
+
+let projects = [];
+let editingProjectId = null;
+
+function loadProjects() {
+  projects = DB.get('projects', null);
+  if (!projects) { projects = DEFAULT_PROJECTS; saveProjects(); }
+}
+
+function saveProjects() { DB.set('projects', projects); }
+
+function getStatusBadge(status) {
+  const map = { active: ['green','🟢 Activo'], finished: ['green','✅ Finalizado'], dev: ['yellow','🟡 En desarrollo'], paused: ['red','🔴 Pausado'] };
+  const [cls, label] = map[status] || ['grey', status];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
+function renderProjects() {
+  const grid = document.getElementById('projects-grid');
+  grid.innerHTML = '';
+  projects.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    const tagsHtml = (p.tags||[]).map(t => `<span class="tag">${t}</span>`).join('');
+    const hasUrl = p.url && p.url.trim();
+    const hasHermes = p.hermesCmd && p.hermesCmd.trim();
+    card.innerHTML = `
+      <div class="card-header">
+        <div class="card-title-row">
+          <span class="card-emoji">${p.emoji||'📁'}</span>
+          ${p.repoUrl ? `<a href="${p.repoUrl}" target="_blank" class="card-title" style="color:inherit;text-decoration:underline">${p.name}</a>` : `<span class="card-title">${p.name}</span>`}
+          ${getStatusBadge(p.status)}
+        </div>
+        <div class="card-desc">${p.desc||''}</div>
+      </div>
+      ${tagsHtml ? `<div class="card-tags">${tagsHtml}</div>` : ''}
+      <div class="card-actions">
+        <div class="action-row">
+          <span class="action-lbl" title="Copiá y pegá en Claude">Claude</span>
+          <button class="btn btn-claude" onclick="copyPromptForProject('${p.id}')">💬 Pedir a Claude</button>
+          ${hasUrl ? `<button class="btn btn-ghost" onclick="window.open('${p.url}')">↗ Ver sitio</button>` : ''}
+        </div>
+        ${hasHermes ? `<div class="action-row">
+          <span class="action-lbl" title="Copiá y pegá en la terminal de Hermes">Hermes</span>
+          <button class="btn btn-hermes" onclick="copyHermesCmd('${p.id}')">⚡ Pedir a Hermes</button>
+        </div>` : ''}
+        ${p.docsUrl ? `<div class="action-row">
+          <span class="action-lbl">KB</span>
+          <button class="btn btn-ghost btn-sm" onclick="window.open('${p.docsUrl}')">📚 Ver ficha</button>
+        </div>` : ''}
+      </div>
+      <div class="card-controls">
+        <button class="btn btn-ghost btn-sm btn-icon" onclick="openEditProject('${p.id}')" title="Editar">✏️</button>
+        <button class="btn btn-danger btn-sm" onclick="confirmDeleteProject('${p.id}')">🗑️ Eliminar</button>
+      </div>`;
+    grid.appendChild(card);
+  });
+  // Add card
+  const addCard = document.createElement('div');
+  addCard.className = 'add-card';
+  addCard.onclick = () => openAddProject();
+  addCard.innerHTML = `<span class="add-icon">+</span><span>Agregar proyecto</span>`;
+  grid.appendChild(addCard);
+
+  // Sync project selects
+  syncProjectSelects();
+}
+
+function copyPromptForProject(id) {
+  const p = projects.find(x => x.id === id);
+  if (!p || !p.claudePrompt) return;
+  copyText(p.claudePrompt, 'Prompt para Claude copiado — pegalo en el chat');
+}
+
+function copyHermesCmd(id) {
+  const p = projects.find(x => x.id === id);
+  if (!p || !p.hermesCmd) return;
+  copyText(p.hermesCmd, 'Comando para Hermes copiado — pegalo en la terminal');
+}
+
+function openAddProject() {
+  editingProjectId = null;
+  document.getElementById('modal-project-title').textContent = 'Agregar proyecto';
+  document.getElementById('btn-delete-project').style.display = 'none';
+  ['mp-id','mp-emoji','mp-name','mp-url','mp-desc','mp-tags','mp-claude-prompt','mp-hermes-cmd']
+    .forEach(id => document.getElementById(id).value = '');
+  document.getElementById('mp-status').value = 'dev';
+  document.getElementById('mp-emoji').value = '📁';
+  openModal('modal-project');
+}
+
+function openEditProject(id) {
+  const p = projects.find(x => x.id === id);
+  if (!p) return;
+  editingProjectId = id;
+  document.getElementById('modal-project-title').textContent = 'Editar proyecto';
+  document.getElementById('btn-delete-project').style.display = 'block';
+  document.getElementById('mp-id').value = p.id;
+  document.getElementById('mp-emoji').value = p.emoji || '📁';
+  document.getElementById('mp-name').value = p.name;
+  document.getElementById('mp-status').value = p.status;
+  document.getElementById('mp-url').value = p.url || '';
+  document.getElementById('mp-desc').value = p.desc || '';
+  document.getElementById('mp-tags').value = (p.tags||[]).join(', ');
+  document.getElementById('mp-claude-prompt').value = p.claudePrompt || '';
+  document.getElementById('mp-hermes-cmd').value = p.hermesCmd || '';
+  openModal('modal-project');
+}
+
+function saveProject() {
+  const name = document.getElementById('mp-name').value.trim();
+  if (!name) { showToast('El nombre es obligatorio'); return; }
+  const data = {
+    id: editingProjectId || slugify(name),
+    emoji: document.getElementById('mp-emoji').value.trim() || '📁',
+    name,
+    status: document.getElementById('mp-status').value,
+    url: document.getElementById('mp-url').value.trim(),
+    desc: document.getElementById('mp-desc').value.trim(),
+    tags: document.getElementById('mp-tags').value.split(',').map(s=>s.trim()).filter(Boolean),
+    claudePrompt: document.getElementById('mp-claude-prompt').value.trim(),
+    hermesCmd: document.getElementById('mp-hermes-cmd').value.trim(),
+    docsUrl: '',
+  };
+  if (editingProjectId) {
+    const idx = projects.findIndex(p => p.id === editingProjectId);
+    if (idx !== -1) projects[idx] = data;
+  } else {
+    projects.push(data);
+  }
+  saveProjects();
+  renderProjects();
+  closeModal('modal-project');
+  showToast(editingProjectId ? '✓ Proyecto actualizado' : '✓ Proyecto agregado');
+}
+
+function deleteCurrentProject() {
+  if (!editingProjectId) return;
+  if (!confirm(`¿Eliminar "${projects.find(p=>p.id===editingProjectId)?.name}"? No se puede deshacer.`)) return;
+  projects = projects.filter(p => p.id !== editingProjectId);
+  saveProjects();
+  renderProjects();
+  closeModal('modal-project');
+  showToast('🗑️ Proyecto eliminado');
+}
+
+function confirmDeleteProject(id) {
+  openEditProject(id);
+}
+
+function slugify(str) {
+  return str.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'').slice(0,30) + '-' + Date.now().toString(36);
+}
+
+// ═══════════════════════════════════════════
+// COSTS
+// ═══════════════════════════════════════════
+
+let sessions = [];
+
+function loadSessions() {
+  sessions = DB.get('sessions', []);
+}
+
+function calcCost(model, inp, out) {
+  const p = MODEL_PRICES[model] || { input:0, output:0 };
+  return (inp / 1e6 * p.input) + (out / 1e6 * p.output);
+}
+
+function addSession() {
+  const model = document.getElementById('s-model').value;
+  const inp = parseInt(document.getElementById('s-input').value) || 0;
+  const out = parseInt(document.getElementById('s-output').value) || 0;
+  const date = document.getElementById('s-date').value || new Date().toISOString().slice(0,10);
+  const proj = document.getElementById('s-project').value || '-';
+  const desc = document.getElementById('s-desc').value.trim();
+  if (!inp && !out) { showToast('Ingresá al menos un valor de tokens'); return; }
+  const cost = calcCost(model, inp, out);
+  sessions.unshift({ id: Date.now(), date, model, project: proj, desc, inp, out, cost });
+  DB.set('sessions', sessions);
+  renderCosts();
+  updateTokenPanel();
+  // Clear form
+  document.getElementById('s-input').value = '';
+  document.getElementById('s-output').value = '';
+  document.getElementById('s-desc').value = '';
+  document.getElementById('s-preview').textContent = '';
+  showToast('✓ Sesión registrada — Costo: $' + cost.toFixed(4));
+}
+
+function deleteSession(id) {
+  sessions = sessions.filter(s => s.id !== id);
+  DB.set('sessions', sessions);
+  renderCosts();
+  updateTokenPanel();
+}
+
+function renderCosts() {
+  const totalCost = sessions.reduce((a,s) => a + s.cost, 0);
+  const totalInp = sessions.reduce((a,s) => a + s.inp, 0);
+  const totalOut = sessions.reduce((a,s) => a + s.out, 0);
+  const stats = document.getElementById('cost-stats');
+  stats.innerHTML = `
+    <div class="stat-card"><div class="stat-label">Total gastado</div><div class="stat-value">$${totalCost.toFixed(2)}</div><div class="stat-sub">acumulado</div></div>
+    <div class="stat-card"><div class="stat-label">Sesiones</div><div class="stat-value">${sessions.length}</div><div class="stat-sub">registradas</div></div>
+    <div class="stat-card"><div class="stat-label">Tokens input</div><div class="stat-value">${(totalInp/1e6).toFixed(2)}M</div><div class="stat-sub">total</div></div>
+    <div class="stat-card"><div class="stat-label">Tokens output</div><div class="stat-value">${(totalOut/1e6).toFixed(2)}M</div><div class="stat-sub">total</div></div>
+  `;
+  const tbody = document.getElementById('sessions-tbody');
+  if (!sessions.length) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-state">Todavía no registraste ninguna sesión.</td></tr>';
+  } else {
+    tbody.innerHTML = sessions.map(s => `
+      <tr>
+        <td>${s.date}</td>
+        <td><span class="model-tag">${MODEL_PRICES[s.model]?.name || s.model}</span></td>
+        <td>${s.project}</td>
+        <td style="color:var(--text2)">${s.desc||'—'}</td>
+        <td style="font-family:monospace">${s.inp.toLocaleString()}</td>
+        <td style="font-family:monospace">${s.out.toLocaleString()}</td>
+        <td style="color:var(--green);font-family:monospace">$${s.cost.toFixed(4)}</td>
+        <td><button class="btn btn-ghost btn-sm btn-icon" onclick="deleteSession(${s.id})" title="Eliminar">🗑️</button></td>
+      </tr>`).join('');
+  }
+  // Prices
+  const pg = document.getElementById('prices-grid');
+  pg.innerHTML = Object.entries(MODEL_PRICES).map(([k,p]) => `
+    <div class="price-card">
+      <div class="price-name" style="color:${p.color}">${p.name}</div>
+      <div class="price-row"><span>Input (1M tokens)</span><span>$${p.input || '?'}</span></div>
+      <div class="price-row"><span>Output (1M tokens)</span><span>$${p.output || '?'}</span></div>
+    </div>`).join('');
+}
+
+// Live cost preview
+['s-model','s-input','s-output'].forEach(id => {
+  document.getElementById(id)?.addEventListener('input', () => {
+    const model = document.getElementById('s-model').value;
+    const inp = parseInt(document.getElementById('s-input').value) || 0;
+    const out = parseInt(document.getElementById('s-output').value) || 0;
+    if (inp || out) {
+      const c = calcCost(model, inp, out);
+      document.getElementById('s-preview').textContent = `≈ $${c.toFixed(4)}`;
+    }
+  });
+});
+
+// ═══════════════════════════════════════════
+// PROMPT GENERATOR
+// ═══════════════════════════════════════════
+
+let savedPrompts = [];
+let generatedPrompt = '';
+
+function loadSavedPrompts() {
+  savedPrompts = DB.get('saved_prompts', []);
+}
+
+function generatePrompt() {
+  const projSel = document.getElementById('pg-project');
+  const projName = projSel.options[projSel.selectedIndex]?.text || 'mi proyecto';
+  const task = document.getElementById('pg-task').value;
+  const tone = document.getElementById('pg-tone').value;
+  const ctx = document.getElementById('pg-context').value.trim();
+  const tmpl = PROMPT_TEMPLATES[task];
+  if (!tmpl) return;
+  generatedPrompt = tmpl(projName, tone, ctx);
+  // Add IA-specific prefix
+  const iaPrefixes = { claude: '', hermes: 'hermes chat "', grok: '', minimax: '' };
+  if (iaPrefixes[selectedIA] && selectedIA !== 'claude') {
+    generatedPrompt = iaPrefixes[selectedIA] + generatedPrompt + (selectedIA === 'hermes' ? '"' : '');
+  }
+  const out = document.getElementById('prompt-output');
+  out.innerHTML = highlightVariables(generatedPrompt);
+  out.classList.remove('empty');
+  document.getElementById('prompt-output-actions').style.display = 'flex';
+}
+
+function clearPrompt() {
+  generatedPrompt = '';
+  const out = document.getElementById('prompt-output');
+  out.textContent = 'El prompt generado aparece acá...';
+  out.classList.add('empty');
+  document.getElementById('prompt-output-actions').style.display = 'none';
+  document.getElementById('pg-context').value = '';
+  // Reset IA selector
+  selectedIA = 'claude';
+  document.querySelectorAll('.ia-option').forEach(b => b.classList.remove('active'));
+  document.querySelector('.ia-option[data-ia="claude"]')?.classList.add('active');
+}
+
+function copyGeneratedPrompt() {
+  if (!generatedPrompt) return;
+  copyText(generatedPrompt, '📋 Prompt copiado — pegalo en el chat');
+}
+
+function saveCurrentPrompt() {
+  if (!generatedPrompt) return;
+  const label = prompt('Nombre para esta plantilla:');
+  if (!label) return;
+  savedPrompts.unshift({ id: Date.now(), label, prompt: generatedPrompt });
+  DB.set('saved_prompts', savedPrompts);
+  renderSavedPrompts();
+  showToast('✓ Plantilla guardada');
+}
+
+function deleteSavedPrompt(id) {
+  savedPrompts = savedPrompts.filter(p => p.id !== id);
+  DB.set('saved_prompts', savedPrompts);
+  renderSavedPrompts();
+}
+
+function renderSavedPrompts() {
+  const el = document.getElementById('saved-prompts-list');
+  if (!savedPrompts.length) {
+    el.innerHTML = '<div class="empty-state" style="padding:16px 0">Todavía no guardaste ninguna plantilla.</div>';
+    return;
+  }
+  el.innerHTML = savedPrompts.map(p => `
+    <div class="ask-pill" style="margin-bottom:6px;padding:10px 12px">
+      <span style="flex:1;font-size:12px">${p.label}</span>
+      <span style="display:flex;gap:5px">
+        <button class="btn btn-ghost btn-sm" onclick="copyText('${encodeURIComponent(p.prompt)}','Plantilla copiada',true)">📋</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteSavedPrompt(${p.id})">🗑️</button>
+      </span>
+    </div>`).join('');
+}
+
+function renderQuickAsk() {
+  document.getElementById('claude-pills').innerHTML = CLAUDE_PILLS.map(p => `
+    <button class="ask-pill" onclick="copyText(${JSON.stringify(p.prompt)}, 'Copiado — pegalo en Claude')">
+      ${p.label} <span class="pill-arrow">copiar →</span>
+    </button>`).join('');
+  document.getElementById('hermes-pills').innerHTML = HERMES_PILLS.map(p => `
+    <button class="ask-pill" onclick="copyText(${JSON.stringify(p.cmd)}, 'Copiado — pegalo en la terminal')">
+      ${p.label} <span class="pill-arrow">copiar →</span>
+    </button>`).join('');
+}
+
+// ═══════════════════════════════════════════
+// ═══════════════════════════════════════════
+// CANVAS OFFICE (Pixel Art Top-Down)
+// ═══════════════════════════════════════════
+
+const OFFICE_AGENTS = [
+  { id:'claude', label:'Claude Opus', role:'Dev & escritura', color:'#ff7b00', skin:'#e8c89c', hair:'#4a3728',
+    active:true, currentTask:'Editando dashboard', state:'working', emotion:'normal', target:null,
+    walkX:0, walkY:0, walking:false, happiness:80, energy:90, progress:0 },
+  { id:'grok1', label:'Grok 4', role:'Curación de contenido', color:'#1d4ed8', skin:'#e8c89c', hair:'#2c1810',
+    active:true, currentTask:'Buscando trends en X', state:'working', emotion:'normal', target:null,
+    walkX:0, walkY:0, walking:false, happiness:70, energy:85, progress:0 },
+  { id:'gemini', label:'Gemini 2.5', role:'Análisis multimodal', color:'#4285f4', skin:'#d4a574', hair:'#1a1a2e',
+    active:false, currentTask:'En standby', state:'idle', emotion:'normal', target:null,
+    walkX:0, walkY:0, walking:false, happiness:60, energy:100, progress:0 },
+  { id:'grok2', label:'Grok 4', role:'Deep research', color:'#2563eb', skin:'#e8c89c', hair:'#3d2b1a',
+    active:true, currentTask:'Investigando web', state:'working', emotion:'normal', target:null,
+    walkX:0, walkY:0, walking:false, happiness:65, energy:80, progress:0 },
+  { id:'llama', label:'Llama 4', role:'Open-source', color:'#ff6b35', skin:'#c4956a', hair:'#1a1a1a',
+    active:false, currentTask:'En standby', state:'idle', emotion:'normal', target:null,
+    walkX:0, walkY:0, walking:false, happiness:55, energy:100, progress:0 },
+  { id:'hermes', label:'Hermes v3', role:'Agente 24/7 (cron)', color:'#8b5cf6', skin:'#e8c89c', hair:'#2c1810',
+    active:true, currentTask:'Corriendo crons', state:'working', emotion:'normal', target:null,
+    walkX:0, walkY:0, walking:false, happiness:95, energy:85, progress:0 },
+  { id:'bedel', label:'Bedel', role:'Soporte RAG', color:'#10b981', skin:'#d4a574', hair:'#4a3728',
+    active:true, currentTask:'Monitoreando RAG', state:'working', emotion:'normal', target:null,
+    walkX:0, walkY:0, walking:false, happiness:80, energy:90, progress:0 },
+  { id:'custom', label:'Personalizado', role:'A medida', color:'#eab308', skin:'#e8c89c', hair:'#8b4513',
+    active:false, currentTask:'Sin configurar', state:'idle', emotion:'normal', target:null,
+    walkX:0, walkY:0, walking:false, happiness:50, energy:100, progress:0 },
+];
+
+// Desk positions (where agents sit)
+const DESK_POSITIONS = [
+  { x:40,  y:180 }, // Claude
+  { x:210, y:180 }, // Grok1
+  { x:380, y:180 }, // Gemini
+  { x:120, y:330 }, // Grok2
+  { x:340, y:330 }, // Llama
+  { x:670, y:60  }, // Hermes
+  { x:670, y:210 }, // Bedel
+  { x:670, y:360 }, // Custom
+];
+
+// Special locations
+const LOCATIONS = {
+  coffee: { x:895, y:100, label:'Mesita café' },
+  bathroom: { x:895, y:250, label:'Baño' },
+};
+
+const OFFICE_HITS = [];
+let officeRunning = true;
+let officeAnim;
+let officeTime = 0;
+let officeSpeed = 1;
+let showParticlesFlag = true;
+let officeParticles = [];
+let officeLog = []; // real activity log
+
+function toggleOffice() {
+  officeRunning = !officeRunning;
+  document.getElementById('btn-pause-office').textContent = officeRunning ? '⏸ Pausar' : '▶ Reanudar';
+  if (officeRunning) drawOfficeLoop();
+  else cancelAnimationFrame(officeAnim);
+}
+
+function drawOfficeLoop() {
+  officeTime += officeSpeed;
+  if (Math.floor(officeTime) % 200 === 0) updateOfficeAgentStates();
+  updateWalkingAgents();
+  drawPixelOffice(officeTime);
+  if (officeRunning) officeAnim = requestAnimationFrame(drawOfficeLoop);
+}
+
+// ══ WALKING SYSTEM ══
+function sendAgentToLocation(agentId, locKey) {
+  const agent = OFFICE_AGENTS.find(a => a.id === agentId);
+  if (!agent || agent.walking) return;
+  const loc = LOCATIONS[locKey];
+  if (!loc) return;
+  agent.walking = true;
+  agent.target = locKey;
+  agent.state = locKey === 'coffee' ? 'coffee' : 'bathroom';
+  // Start from current position
+  const deskIdx = OFFICE_AGENTS.indexOf(agent);
+  const dp = DESK_POSITIONS[deskIdx];
+  agent.walkX = dp.x + 55;
+  agent.walkY = dp.y + 40;
+  agent.targetX = loc.x;
+  agent.targetY = loc.y;
+  agent.currentTask = locKey === 'coffee' ? 'Yendo a tomar café...' : 'Yendo al baño...';
+  addLog(agent.label, agent.currentTask);
+  renderOfficeLegend();
+}
+
+function returnAgentToDesk(agentId) {
+  const agent = OFFICE_AGENTS.find(a => a.id === agentId);
+  if (!agent) return;
+  const deskIdx = OFFICE_AGENTS.indexOf(agent);
+  const dp = DESK_POSITIONS[deskIdx];
+  agent.targetX = dp.x + 55;
+  agent.targetY = dp.y + 40;
+  agent.target = 'desk';
+  agent.walking = true;
+  agent.currentTask = 'Volviendo al escritorio...';
+  addLog(agent.label, agent.currentTask);
+}
+
+function updateWalkingAgents() {
+  OFFICE_AGENTS.forEach(agent => {
+    if (!agent.walking) return;
+    const dx = agent.targetX - agent.walkX;
+    const dy = agent.targetY - agent.walkY;
+    const dist = Math.sqrt(dx*dx + dy*dy);
+    if (dist < 4) {
+      agent.walkX = agent.targetX;
+      agent.walkY = agent.targetY;
+      agent.walking = false;
+      if (agent.target === 'coffee') {
+        agent.state = 'coffee';
+        agent.currentTask = 'Tomando café ☕';
+        agent.energy = Math.min(100, agent.energy + 20);
+        addLog(agent.label, 'Llegó a tomar café');
+        // Return after 3 seconds
+        setTimeout(() => returnAgentToDesk(agent.id), 3000);
+      } else if (agent.target === 'bathroom') {
+        agent.state = 'bathroom';
+        agent.currentTask = 'En el baño 🚽';
+        addLog(agent.label, 'Llegó al baño');
+        setTimeout(() => returnAgentToDesk(agent.id), 2500);
+      } else if (agent.target === 'desk') {
+        agent.state = agent.active ? 'working' : 'idle';
+        agent.currentTask = agent.active ? 'Trabajando' : 'En standby';
+        addLog(agent.label, 'Volvió al escritorio');
+      }
+      agent.target = null;
+      renderOfficeLegend();
+    } else {
+      const speed = 2.5;
+      agent.walkX += (dx / dist) * speed;
+      agent.walkY += (dy / dist) * speed;
+    }
+  });
+}
+
+function updateOfficeAgentStates() {
+  OFFICE_AGENTS.forEach(a => {
+    if (a.walking) return;
+    const r = Math.random();
+    if (a.energy < 20) { a.state = 'sleeping'; a.energy = Math.min(100, a.energy + 30); a.currentTask = 'Durmiendo...'; }
+    else if (r > 0.9 && a.active) { a.state = 'happy'; a.happiness = Math.min(100, a.happiness + 10); a.currentTask = '¡Contento!'; addOfficeParticles(a._cx, a._cy, a.color); }
+    else if (r > 0.75) { a.state = 'idle'; a.currentTask = 'Descansando'; }
+    else if (a.active) { a.state = 'working'; a.currentTask = ['Editando código','Buscando datos','Procesando','Analizando','Generando'][Math.floor(Math.random()*5)]; }
+    a.energy = Math.max(0, a.energy - (a.active ? 1 : 0));
+  });
+  renderOfficeLegend();
+}
+
+function addOfficeParticles(x, y, color) {
+  if (!showParticlesFlag || !x) return;
+  for (let i = 0; i < 8; i++) {
+    officeParticles.push({
+      x: x + Math.random()*20-10, y: y + Math.random()*15-7,
+      vx: (Math.random()-0.5)*3, vy: -Math.random()*3-1,
+      size: Math.random()*3+1, color, life: 50, maxLife: 50
+    });
+  }
+}
+
+// ══ ACTIVITY LOG ══
+function addLog(agentName, msg) {
+  const now = new Date();
+  const time = now.getHours().toString().padStart(2,'0') + ':' + now.getMinutes().toString().padStart(2,'0');
+  officeLog.unshift({ agent: agentName, msg, time });
+  if (officeLog.length > 20) officeLog.pop();
+}
+
+// ══ MAIN DRAW FUNCTION ══
+function drawPixelOffice(t) {
+  const canvas = document.getElementById('office-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.imageSmoothingEnabled = false;
+  OFFICE_HITS.length = 0;
+
+  // ══ EMOTION EVOLUTION (timing-based, zero weight) ══
+  if (Math.floor(t) % 120 === 0 && Math.floor(t) > 0) {
+    OFFICE_AGENTS.forEach(a => {
+      // Idle agents get bored after standing around
+      if (a.state === 'idle' && Math.random() < 0.3) a.emotion = 'bored';
+      // Working agents with slow progress get bored
+      else if (a.state === 'working' && a.progress < 0.2 && Math.random() < 0.2) a.emotion = 'bored';
+      // Fast progress = happy
+      else if (a.state === 'working' && a.progress > 0.8) a.emotion = 'happy';
+      // Low energy = sleepy
+      else if (a.energy < 30 && Math.random() < 0.4) a.emotion = 'sleepy';
+      // Angry = task blocked (random chance for now, could be tied to errors)
+      else if (a.progress < 0.1 && a.state === 'working' && Math.random() < 0.15) a.emotion = 'angry';
+      // Default back to normal when actively working
+      else if (a.state === 'working' && a.emotion !== 'angry') a.emotion = 'normal';
+      // Idle agents recover energy
+      if (a.state === 'idle') a.energy = Math.min(100, a.energy + 2);
+    });
+  }
+
+  // ══ LOCALSTORAGE SYNC (every 300 frames, zero HTTP) ══
+  if (Math.floor(t) % 300 === 0 && Math.floor(t) > 0) {
+    try {
+      const saved = localStorage.getItem('office_agents');
+      if (saved) {
+        const savedAgents = JSON.parse(saved);
+        savedAgents.forEach(sa => {
+          const agent = OFFICE_AGENTS.find(a => a.id === sa.id);
+          if (agent && sa.currentTask) agent.currentTask = sa.currentTask;
+          if (agent && sa.state) agent.state = sa.state;
+          if (agent && sa.progress !== undefined) agent.progress = sa.progress;
+        });
+      }
+    } catch(e) {}
+  }
+
+
+  // ── CLEAR ──
+  ctx.fillStyle = '#0d1117';
+  ctx.fillRect(0, 0, W, H);
+
+  // ── FLOOR: LEFT ZONE (warm wood) ──
+  for (let x = 0; x < 636; x += 32) {
+    for (let y = 110; y < H - 44; y += 32) {
+      ctx.fillStyle = ((x/32 + y/32) % 2 === 0) ? '#b8905c' : '#a67d4a';
+      ctx.fillRect(x, y, 32, 32);
+    }
+  }
+
+  // ── FLOOR: RIGHT ZONE (cool blue) ──
+  for (let x = 642; x < W; x += 32) {
+    for (let y = 110; y < H - 44; y += 32) {
+      ctx.fillStyle = ((x/32 + y/32) % 2 === 0) ? '#7ea8c4' : '#6d97b3';
+      ctx.fillRect(x, y, 32, 32);
+    }
+  }
+
+  // ── WALL (top) ──
+  ctx.fillStyle = '#2a2a3a';
+  ctx.fillRect(0, 26, W, 84);
+
+  // ── TITLE BAR ──
+  ctx.fillStyle = '#101012';
+  ctx.fillRect(0, 0, W, 24);
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 14px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText('Oficina Pixel Art', 10, 17);
+
+  // ── DIVIDER WALL ──
+  ctx.fillStyle = '#5a4a3a';
+  ctx.fillRect(636, 26, 6, H - 70);
+  ctx.strokeStyle = '#7a6a5a';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(636, 26, 6, H - 70);
+
+  // ── BOOKSHELVES (4 units on wall, left side) ──
+  for (let s = 0; s < 4; s++) {
+    const sx = 12 + s * 156;
+    const sy = 30;
+    // Shelf back
+    ctx.fillStyle = '#4a3020';
+    ctx.fillRect(sx, sy, 148, 78);
+    ctx.fillStyle = '#5a3a24';
+    ctx.fillRect(sx + 2, sy + 2, 144, 74);
+    // Horizontal shelves
+    ctx.fillStyle = '#3a2210';
+    ctx.fillRect(sx, sy + 25, 148, 3);
+    ctx.fillRect(sx, sy + 51, 148, 3);
+    // Books
+    const colors = ['#c0392b','#2980b9','#27ae60','#f39c12','#8e44ad','#1abc9c','#d35400','#ecf0f1','#e74c3c','#3498db','#2ecc71','#e67e22'];
+    for (let row = 0; row < 3; row++) {
+      let bx = sx + 5;
+      const by = sy + 3 + row * 26;
+      for (let b = 0; b < 13; b++) {
+        const bw = 5 + ((s + row + b * 3) % 5);
+        const bh = 16 + ((s * 2 + row + b) % 7);
+        ctx.fillStyle = colors[(s * 3 + row * 4 + b) % colors.length];
+        ctx.fillRect(bx, by + (22 - bh), bw, bh);
+        bx += bw + 1;
+        if (bx > sx + 140) break;
+      }
+    }
+  }
+
+  // ── DESKS (LEFT ZONE) ──
+  const leftPos = [
+    { x:30,  y:165 }, // Claude
+    { x:200, y:165 }, // Grok
+    { x:370, y:165 }, // Gemini
+    { x:110, y:310 }, // Grok2
+    { x:330, y:310 }, // Llama
+  ];
+  leftPos.forEach((dp, i) => {
+    const agent = OFFICE_AGENTS[i];
+    if (!agent) return;
+    drawDesk(ctx, dp.x, dp.y, agent, t, i);
+    agent._cx = dp.x + 50;
+    agent._cy = dp.y + 30;
+    OFFICE_HITS.push({ x: dp.x - 5, y: dp.y - 10, w: 110, h: 120, type: 'agent', data: agent.id });
+  });
+
+  // ── DESKS (RIGHT ZONE) ──
+  const rightPos = [
+    { x:665, y:60  }, // Hermes
+    { x:665, y:210 }, // Bedel
+    { x:665, y:350 }, // Custom
+  ];
+  rightPos.forEach((dp, i) => {
+    const agent = OFFICE_AGENTS[5 + i];
+    if (!agent) return;
+    drawDesk(ctx, dp.x, dp.y, agent, t, 5 + i);
+    agent._cx = dp.x + 50;
+    agent._cy = dp.y + 30;
+    OFFICE_HITS.push({ x: dp.x - 5, y: dp.y - 10, w: 110, h: 120, type: 'agent', data: agent.id });
+  });
+
+  // ── WALKING AGENTS ──
+  OFFICE_AGENTS.forEach(agent => {
+    if (agent.walking) drawWalkingChar(ctx, agent.walkX, agent.walkY, agent, t);
+  });
+
+  // ── COFFEE STATION ──
+  drawCoffeeStation(ctx, 840, 55, t);
+  OFFICE_HITS.push({ x: 830, y: 45, w: 110, h: 95, type: 'coffee', data: null });
+
+  // ── BATHROOM ──
+  drawBathroomArea(ctx, 840, 200, t);
+  OFFICE_HITS.push({ x: 830, y: 190, w: 110, h: 95, type: 'bathroom', data: null });
+
+  // ── QUICK ASK ──
+  ctx.fillStyle = '#1a2332';
+  ctx.fillRect(845, 365, 95, 36);
+  ctx.strokeStyle = '#58a6ff';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(845, 365, 95, 36);
+  ctx.fillStyle = '#58a6ff';
+  ctx.font = 'bold 10px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('Quick Ask', 893, 388);
+  ctx.textAlign = 'left';
+  OFFICE_HITS.push({ x: 845, y: 365, w: 95, h: 36, type: 'quickask', data: null });
+
+  // ── FILING CABINETS ──
+  drawFilingCabinet(ctx, 575, 140);
+  drawFilingCabinet(ctx, 575, 290);
+
+  // ── COAT RACK ──
+  drawCoatRack(ctx, 605, 415);
+
+  // ── PLANTS ──
+  drawPlant(ctx, 5, 405, t);
+  drawPlant(ctx, 595, 405, t);
+  drawPlant(ctx, 650, 415, t);
+
+  // ── HANGING LAMPS ──
+  drawLamp(ctx, 120, 24, t);
+  drawLamp(ctx, 360, 24, t);
+  drawLamp(ctx, 760, 24, t);
+
+  // ── CURSOR HAND ──
+  drawCursor(ctx, 85 + Math.sin(t * 0.012) * 10, 158 + Math.cos(t * 0.015) * 4);
+
+  // ── PARTICLES ──
+  officeParticles = officeParticles.filter(p => p.life > 0);
+  officeParticles.forEach(p => {
+    ctx.save();
+    ctx.globalAlpha = p.life / p.maxLife;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+    ctx.fill();
+    p.x += p.vx; p.y += p.vy; p.vy += 0.08; p.life--;
+    ctx.restore();
+  });
+}
+
+// ══ DESK ══
+function drawDesk(ctx, x, y, agent, t, idx) {
+  // Desk surface
+  ctx.fillStyle = '#6b4e0a';
+  ctx.fillRect(x, y + 52, 100, 12);
+  ctx.fillStyle = '#8b6914';
+  ctx.fillRect(x, y + 52, 100, 3);
+  // Legs
+  ctx.fillStyle = '#4a3508';
+  ctx.fillRect(x + 4, y + 64, 5, 16);
+  ctx.fillRect(x + 91, y + 64, 5, 16);
+
+  // Monitor
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(x + 20, y + 6, 60, 44);
+  ctx.fillStyle = '#111827';
+  ctx.fillRect(x + 23, y + 9, 54, 38);
+
+  // Screen content
+  if (agent.active && !agent.walking) {
+    ctx.fillStyle = agent.color;
+    ctx.globalAlpha = 0.65;
+    for (let l = 0; l < 5; l++) {
+      ctx.fillRect(x + 26, y + 12 + l * 7, 10 + ((l * 17 + t * 0.2 + idx * 9) % 36), 2);
+    }
+    if (Math.floor(t / 20) % 2 === 0) {
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(x + 26 + ((t * 0.3 + idx * 8) % 42 | 0), y + 12 + 28, 3, 2);
+    }
+    ctx.globalAlpha = 1;
+    // Glow
+    const g = ctx.createRadialGradient(x + 50, y + 30, 3, x + 50, y + 30, 45);
+    g.addColorStop(0, agent.color + '1a');
+    g.addColorStop(1, 'transparent');
+    ctx.fillStyle = g;
+    ctx.fillRect(x, y - 10, 100, 60);
+  } else {
+    ctx.fillStyle = '#4b5563';
+    ctx.font = '9px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText(agent.walking ? '>>>' : 'offline', x + 50, y + 32);
+    ctx.textAlign = 'left';
+  }
+
+  // Chair
+  ctx.fillStyle = '#3a3a3a';
+  ctx.fillRect(x + 30, y + 66, 40, 6);
+  ctx.fillStyle = '#4a4a4a';
+  ctx.fillRect(x + 46, y + 72, 8, 10);
+
+  // Character
+  if (!agent.walking) {
+    drawChar(ctx, x + 50, y - 10 + (agent.active ? Math.sin(t * 0.06 + idx) * 2 : 0), agent, t);
+  }
+
+  // Label (clear, readable)
+  ctx.fillStyle = '#ffffff';
+  ctx.font = 'bold 10px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(agent.label, x + 50, y + 100);
+  ctx.fillStyle = '#9ca3af';
+  ctx.font = '7px monospace';
+  ctx.fillText(agent.role, x + 50, y + 110);
+  ctx.textAlign = 'left';
+
+  // Status dot
+  ctx.beginPath();
+  ctx.arc(x + 92, y + 4, 4, 0, Math.PI * 2);
+  ctx.fillStyle = agent.walking ? '#fbbf24' : (agent.active ? '#22c55e' : '#6b7280');
+  ctx.fill();
+}
+
+// ══ HUMAN CHARACTER ══
+function drawChar(ctx, cx, cy, agent, t) {
+  const P = 3;
+  const skin = agent.skin || '#e8c89c';
+  const hair = agent.hair || '#4a3728';
+  const shirt = agent.color;
+  // Hair
+  ctx.fillStyle = hair;
+  ctx.fillRect(cx - 3*P, cy, 6*P, P);
+  ctx.fillRect(cx - 4*P, cy + P, 8*P, P);
+  // Head
+  ctx.fillStyle = skin;
+  ctx.fillRect(cx - 3*P, cy + P, 6*P, 5*P);
+  ctx.fillRect(cx - 4*P, cy + 2*P, P, 3*P);
+  ctx.fillRect(cx + 3*P, cy + 2*P, P, 3*P);
+  // Eyes
+  ctx.fillStyle = '#111';
+  ctx.fillRect(cx - 2*P, cy + 3*P, P, P);
+  ctx.fillRect(cx + P, cy + 3*P, P, P);
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(cx - 2*P + 1, cy + 3*P, 1, 1);
+  ctx.fillRect(cx + P + 1, cy + 3*P, 1, 1);
+  // Mouth
+  if (agent.state === 'happy') {
+    ctx.fillStyle = '#c0392b';
+    ctx.fillRect(cx - P, cy + 5*P, 2*P, P);
+  }
+  // Body
+  ctx.fillStyle = shirt;
+  ctx.fillRect(cx - 3*P, cy + 6*P, 6*P, 4*P);
+  ctx.fillRect(cx - 4*P, cy + 7*P, P, 2*P);
+  ctx.fillRect(cx + 3*P, cy + 7*P, P, 2*P);
+  // Arms
+  const arm = agent.active ? Math.sin(t * 0.08 + cx * 0.01) * P : 0;
+  ctx.fillStyle = skin;
+  ctx.fillRect(cx - 5*P, cy + 7*P + arm, P, 3*P);
+  ctx.fillRect(cx + 4*P, cy + 7*P - arm, P, 3*P);
+  // Pants
+  ctx.fillStyle = '#2c3e50';
+  ctx.fillRect(cx - 3*P, cy + 10*P, 6*P, 3*P);
+  ctx.fillRect(cx - 2*P, cy + 13*P, 2*P, 2*P);
+  ctx.fillRect(cx + P, cy + 13*P, 2*P, 2*P);
+  // Shoes
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(cx - 3*P, cy + 15*P, 2*P, P);
+  ctx.fillRect(cx + P, cy + 15*P, 2*P, P);
+}
+
+// ══ WALKING CHARACTER ══
+function drawWalkingChar(ctx, x, y, agent, t) {
+  const bounce = Math.sin(t * 0.15) * 2;
+  // Shadow
+  ctx.fillStyle = 'rgba(0,0,0,0.25)';
+  ctx.beginPath();
+  ctx.ellipse(x, y + 48, 7, 2, 0, 0, Math.PI * 2);
+  ctx.fill();
+  drawChar(ctx, x, y + bounce, agent, t);
+  // Dust
+  if (Math.random() > 0.5) {
+    ctx.fillStyle = 'rgba(200,180,150,0.3)';
+    ctx.fillRect(x - 4 + Math.random() * 8, y + 48, 2, 2);
+  }
+}
+
+// ══ COFFEE STATION ══
+function drawCoffeeStation(ctx, x, y, t) {
+  // Table
+  ctx.fillStyle = '#6b4e0a';
+  ctx.fillRect(x + 5, y + 48, 80, 8);
+  ctx.fillStyle = '#8b6914';
+  ctx.fillRect(x + 5, y + 48, 80, 2);
+  ctx.fillStyle = '#4a3508';
+  ctx.fillRect(x + 10, y + 56, 4, 14);
+  ctx.fillRect(x + 76, y + 56, 4, 14);
+  // Machine
+  ctx.fillStyle = '#2a2a2a';
+  ctx.fillRect(x + 48, y + 14, 30, 34);
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillRect(x + 51, y + 17, 24, 28);
+  ctx.fillStyle = '#5a3520';
+  ctx.fillRect(x + 53, y + 24, 20, 16);
+  // Light
+  ctx.fillStyle = Math.sin(t * 0.05) > 0 ? '#22c55e' : '#ef4444';
+  ctx.beginPath();
+  ctx.arc(x + 63, y + 19, 2, 0, Math.PI * 2);
+  ctx.fill();
+  // Cups
+  for (let i = 0; i < 3; i++) {
+    const cx = x + 12 + i * 14;
+    ctx.fillStyle = '#f5f5f5';
+    ctx.fillRect(cx, y + 36, 8, 10);
+    ctx.fillStyle = '#6b4226';
+    ctx.fillRect(cx + 2, y + 38, 4, 6);
+    if (Math.sin(t * 0.06 + i) > 0.3) {
+      ctx.fillStyle = 'rgba(255,255,255,0.2)';
+      ctx.fillRect(cx + 3, y + 30 + Math.sin(t * 0.1 + i) * 3, 2, 5);
+    }
+  }
+  // Labels
+  ctx.fillStyle = '#d4a44a';
+  ctx.font = 'bold 8px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('Mesita para', x + 45, y + 78);
+  ctx.fillText('servirse caffersonalizado', x + 45, y + 88);
+  ctx.textAlign = 'left';
+}
+
+// ══ BATHROOM ══
+function drawBathroomArea(ctx, x, y, t) {
+  // Door frame
+  ctx.fillStyle = '#4a3020';
+  ctx.fillRect(x + 8, y, 74, 68);
+  // Door panels
+  ctx.fillStyle = '#6b4e2a';
+  ctx.fillRect(x + 12, y + 4, 66, 60);
+  // Upper panel
+  ctx.fillStyle = '#7a5d34';
+  ctx.fillRect(x + 16, y + 8, 26, 22);
+  ctx.fillRect(x + 48, y + 8, 26, 22);
+  // Lower panel
+  ctx.fillStyle = '#7a5d34';
+  ctx.fillRect(x + 16, y + 34, 26, 24);
+  ctx.fillRect(x + 48, y + 34, 26, 24);
+  // Door knob
+  ctx.fillStyle = '#f0c040';
+  ctx.fillRect(x + 68, y + 30, 4, 6);
+  ctx.fillStyle = '#d4a430';
+  ctx.fillRect(x + 68, y + 36, 4, 2);
+  // Sign (WC)
+  ctx.fillStyle = '#2563eb';
+  ctx.fillRect(x + 32, y - 6, 26, 14);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 9px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('WC', x + 45, y + 4);
+  // Label
+  ctx.fillStyle = '#bbb';
+  ctx.font = 'bold 8px monospace';
+  ctx.fillText('Puerta', x + 45, y + 82);
+  ctx.textAlign = 'left';
+}
+
+// ══ DECORATIONS ══
+function drawFilingCabinet(ctx, x, y) {
+  ctx.fillStyle = '#666';
+  ctx.fillRect(x, y, 28, 48);
+  ctx.fillStyle = '#555';
+  ctx.fillRect(x + 2, y + 4, 24, 11);
+  ctx.fillRect(x + 2, y + 18, 24, 11);
+  ctx.fillRect(x + 2, y + 32, 24, 11);
+  ctx.fillStyle = '#888';
+  ctx.fillRect(x + 11, y + 8, 6, 2);
+  ctx.fillRect(x + 11, y + 22, 6, 2);
+  ctx.fillRect(x + 11, y + 36, 6, 2);
+}
+
+function drawCoatRack(ctx, x, y) {
+  ctx.fillStyle = '#4a3508';
+  ctx.fillRect(x + 7, y, 4, 42);
+  ctx.fillRect(x, y + 40, 18, 4);
+  ctx.fillStyle = '#777';
+  ctx.fillRect(x, y + 4, 7, 2);
+  ctx.fillRect(x + 11, y + 10, 7, 2);
+  ctx.fillStyle = '#c0392b';
+  ctx.fillRect(x + 1, y + 6, 7, 12);
+  ctx.fillStyle = '#2980b9';
+  ctx.fillRect(x + 12, y + 12, 6, 10);
+}
+
+function drawPlant(ctx, x, y, t) {
+  ctx.fillStyle = '#8b4513';
+  ctx.fillRect(x, y + 10, 16, 12);
+  ctx.fillStyle = '#a0522d';
+  ctx.fillRect(x - 2, y + 8, 20, 4);
+  const sw = Math.sin(t * 0.03) * 2;
+  ctx.fillStyle = '#1a8f3f';
+  ctx.fillRect(x + 6 + sw, y - 8, 4, 18);
+  ctx.fillRect(x + 2 + sw, y - 4, 4, 8);
+  ctx.fillRect(x + 10 + sw, y - 2, 4, 8);
+  ctx.fillStyle = '#22c55e';
+  ctx.fillRect(x + 4 + sw, y - 12, 8, 7);
+}
+
+function drawLamp(ctx, x, y, t) {
+  ctx.fillStyle = '#333';
+  ctx.fillRect(x + 4, y, 2, 16);
+  ctx.fillStyle = '#e0b040';
+  ctx.beginPath();
+  ctx.moveTo(x - 3, y + 16); ctx.lineTo(x + 13, y + 16);
+  ctx.lineTo(x + 11, y + 22); ctx.lineTo(x - 1, y + 22);
+  ctx.closePath(); ctx.fill();
+  const g = ctx.createRadialGradient(x + 5, y + 24, 2, x + 5, y + 24, 35);
+  g.addColorStop(0, 'rgba(224,176,64,0.1)');
+  g.addColorStop(1, 'transparent');
+  ctx.fillStyle = g;
+  ctx.fillRect(x - 30, y + 8, 70, 50);
+}
+
+function drawCursor(ctx, x, y) {
+  ctx.fillStyle = '#fff';
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x, y + 16);
+  ctx.lineTo(x + 4, y + 12);
+  ctx.lineTo(x + 4, y + 18);
+  ctx.lineTo(x + 8, y + 16);
+  ctx.lineTo(x + 6, y + 10);
+  ctx.lineTo(x + 10, y + 10);
+  ctx.lineTo(x + 10, y + 6);
+  ctx.lineTo(x + 6, y + 6);
+  ctx.lineTo(x + 6, y);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#222';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+}
+
+// ══ CLICK HANDLER ══
+function initOffice() {
+  // Sync agent states from localStorage (set by cron or other tools)
+  try {
+    const saved = localStorage.getItem('office_agents');
+    if (saved) {
+      const savedAgents = JSON.parse(saved);
+      savedAgents.forEach(sa => {
+        const agent = OFFICE_AGENTS.find(a => a.id === sa.id);
+        if (agent && sa.currentTask) agent.currentTask = sa.currentTask;
+        if (agent && sa.state) agent.state = sa.state;
+        if (agent && sa.emotion) agent.emotion = sa.emotion;
+        if (agent && sa.progress !== undefined) agent.progress = sa.progress;
+      });
+    }
+  } catch(e) {}
+  renderOfficeLegend();
+  const canvas = document.getElementById('office-canvas');
+  if (canvas) canvas.addEventListener('click', handleOfficeClick);
+  // Init log with current state
+  OFFICE_AGENTS.forEach(a => addLog(a.label, a.currentTask));
+  renderOfficeLegend();
+}
+
+function handleOfficeClick(e) {
+  const canvas = e.target;
+  const rect = canvas.getBoundingClientRect();
+  // Map CSS coords to canvas coords (canvas width=960 height=480, CSS may scale)
+  const sx = canvas.width / rect.width;
+  const sy = canvas.height / rect.height;
+  const mx = (e.clientX - rect.left) * sx;
+  const my = (e.clientY - rect.top) * sy;
+  // Debug: log click position (remove in prod)
+  // console.log('click at', mx, my, 'hits:', OFFICE_HITS.length);
+  for (const hit of OFFICE_HITS) {
+    if (mx >= hit.x && mx <= hit.x + hit.w && my >= hit.y && my <= hit.y + hit.h) {
+      if (hit.type === 'agent') showAgentMenu(hit.data, e);
+      else if (hit.type === 'coffee') openCoffeeModal();
+      else if (hit.type === 'bathroom') openBathroomModal();
+      else if (hit.type === 'quickask') switchTab('prompts', document.querySelectorAll('.tab')[1]);
+      return;
+    }
+  }
+}
+
+// ══ AGENT INTERACTION MENU ══
+let currentAgentMenu = null;
+
+function showAgentMenu(agentId, e) {
+  const agent = OFFICE_AGENTS.find(a => a.id === agentId);
+  if (!agent) return;
+  currentAgentMenu = agent;
+  // Remove existing menus
+  const old = document.querySelector('.agent-menu-popup');
+  if (old) old.remove();
+  const menu = document.createElement('div');
+  menu.className = 'agent-menu-popup';
+  menu.style.cssText = 'position:fixed;background:#161b22;border:1px solid #30363d;border-radius:10px;padding:10px;z-index:1000;font-size:12px;box-shadow:0 4px 20px rgba(0,0,0,.5);min-width:200px';
+  menu.style.left = Math.min(e.clientX, window.innerWidth - 220) + 'px';
+  menu.style.top = Math.min(e.clientY, window.innerHeight - 180) + 'px';
+  const stateEmoji = { working:'💻', happy:'😊', sleeping:'😴', coffee:'☕', bathroom:'🚽', idle:'😐' };
+    const emEmojis = { normal:'', angry:'😠 Enojado', bored:'🥱 Aburrido', happy:'✨ Contento', sleepy:'💤 Cansado' };
+  menu.innerHTML = '<div style="font-weight:700;margin-bottom:8px;color:'+agent.color+'">'+agent.label+'</div>'
+    + '<div style="color:#8b949e;margin-bottom:10px;font-size:11px">'+(stateEmoji[agent.state]||'💻')+' '+agent.currentTask+(emEmojis[agent.emotion] ? ' · '+emEmojis[agent.emotion] : '')+'</div>'
+    + '<button class="agent-menu-btn" data-action="request" data-id="'+agentId+'">💬 Pedirle algo</button>'
+    + '<button class="agent-menu-btn" data-action="coffee" data-id="'+agentId+'">☕ Ir a tomar café</button>'
+    + '<button class="agent-menu-btn" data-action="bathroom" data-id="'+agentId+'">🚽 Ir al baño</button>';
+  document.body.appendChild(menu);
+  menu.querySelectorAll('.agent-menu-btn').forEach(btn => {
+    btn.style.cssText = 'display:block;width:100%;text-align:left;background:none;border:none;color:#e6edf3;padding:6px 8px;cursor:pointer;border-radius:4px;font-size:12px';
+    btn.addEventListener('mouseenter', () => btn.style.background = '#21262d');
+    btn.addEventListener('mouseleave', () => btn.style.background = 'none');
+    btn.addEventListener('click', () => {
+      const action = btn.dataset.action;
+      const id = btn.dataset.id;
+      if (action === 'request') openAgentRequest(id);
+      else if (action === 'coffee') { sendAgentToLocation(id, 'coffee'); closeAgentMenu(); }
+      else if (action === 'bathroom') { sendAgentToLocation(id, 'bathroom'); closeAgentMenu(); }
+    });
+  });
+  menuJustOpened = true;
+  setTimeout(() => document.addEventListener('click', closeAgentMenu, { once: true }), 80);
+}
+
+let menuJustOpened = false;
+function closeAgentMenu() {
+  if (menuJustOpened) { menuJustOpened = false; return; }
+  const m = document.querySelector('.agent-menu-popup');
+  if (m) m.remove();
+}
+
+// ══ AGENT REQUEST MODAL ══
+function openAgentRequest(agentId) {
+  closeAgentMenu();
+  const agent = OFFICE_AGENTS.find(a => a.id === agentId);
+  if (!agent) return;
+  currentAgentMenu = agent;
+  document.getElementById('modal-agent-title').textContent = 'Pedirle a ' + agent.label;
+  document.getElementById('agent-request-text').value = '';
+  openModal('modal-agent-request');
+}
+
+function generateAgentPrompt() {
+  if (!currentAgentMenu) return;
+  const text = document.getElementById('agent-request-text').value.trim();
+  const tone = document.getElementById('agent-request-tone').value;
+  if (!text) { showToast('Escribí lo que querés pedir'); return; }
+  const tm = { casual:'', technical:'Con detalle técnico: ', creative:'Pensalo creativamente: ', concise:'Respuesta directa: ' };
+  let prompt = (tm[tone]||'') + text;
+  if (currentAgentMenu.id === 'hermes' || currentAgentMenu.id === 'bedel') {
+    prompt = 'hermes chat "' + prompt + '"';
+  }
+  copyText(prompt, '📋 Prompt copiado para ' + currentAgentMenu.label);
+  closeModal('modal-agent-request');
+  addOfficeParticles(currentAgentMenu._cx, currentAgentMenu._cy, currentAgentMenu.color);
+  addLog(currentAgentMenu.label, 'Prompt generado');
+  renderOfficeLegend();
+}
+
+// ══ COFFEE / BATHROOM MODALS ══
+function openCoffeeModal() {
+  document.getElementById('coffee-request').value = '';
+  openModal('modal-coffee');
+}
+function closeCoffeeModal() {
+  const req = document.getElementById('coffee-request').value.trim();
+  closeModal('modal-coffee');
+  showToast(req ? '☕ Café tomado — pedido guardado' : '☕ Café tomado');
+  addLog('Oficina', 'Alguien fue a tomar café');
+  renderOfficeLegend();
+}
+function openBathroomModal() { openModal('modal-bathroom'); }
+function closeBathroomModal() {
+  closeModal('modal-bathroom');
+  showToast('🚽 El agente volvió');
+  addLog('Oficina', 'Alguien fue al baño');
+  renderOfficeLegend();
+}
+
+// ══ LEGEND + ACTIVITY FEED ══
+function renderOfficeLegend() {
+  const el = document.getElementById('office-legend');
+  if (!el) return;
+  const emojis = { working:'💻', happy:'😊', sleeping:'😴', coffee:'☕', bathroom:'🚽', idle:'😐' };
+    const emEmojis = { normal:'', angry:'😠', bored:'🥱', happy:'✨', sleepy:'💤' };
+  el.innerHTML = OFFICE_AGENTS.map(a =>
+    '<div class="legend-item"><span class="legend-dot" style="background:'+a.color+'"></span><strong>'+a.label+'</strong><span style="color:var(--text3)"> — '+(emojis[a.state]||'💻')+' '+a.currentTask+' '+(emEmojis[a.emotion]||'')+'</span></div>'
+  ).join('');
+  // Real activity feed from log
+  const feed = document.getElementById('activity-feed');
+  if (feed) {
+    if (officeLog.length === 0) {
+      feed.innerHTML = '<div class="activity-item" style="color:var(--text3)">Sin actividad reciente</div>';
+    } else {
+      feed.innerHTML = officeLog.slice(0, 8).map(l => {
+        const agent = OFFICE_AGENTS.find(a => a.label === l.agent);
+        const color = agent ? agent.color : '#94a3b8';
+        return '<div class="activity-item"><span class="ai-name" style="color:'+color+'">'+l.agent+'</span><span>'+l.msg+'</span><span class="activity-time">'+l.time+'</span></div>';
+      }).join('');
+    }
+  }
+}
+
+// ══ REPORT / CALL / SETTINGS ══
+function openReportModal() {
+  openModal('modal-report');
+  const sel = document.getElementById('report-agent');
+  if (sel) sel.innerHTML = OFFICE_AGENTS.map(a => '<option value="'+a.id+'">'+a.label+'</option>').join('');
+}
+function submitReport() {
+  const agent = document.getElementById('report-agent').value;
+  const desc = document.getElementById('report-desc').value.trim();
+  if (!desc) { showToast('Describí el problema'); return; }
+  closeModal('modal-report');
+  addLog('Sistema', 'Reporte: ' + desc.slice(0,40));
+  showToast('📋 Reporte enviado');
+  renderOfficeLegend();
+}
+function startCall() {
+  showToast('📞 Llamada iniciada con el equipo de IAs');
+  addLog('Sistema', 'Llamada iniciada');
+  renderOfficeLegend();
+}
+function openSettingsModal() { openModal('modal-settings'); }
+function setOfficeSpeed(val) {
+  officeSpeed = parseFloat(val) || 1;
+  showToast('Velocidad: ' + (officeSpeed === 0.5 ? 'Lenta' : officeSpeed === 2 ? 'Rápida' : 'Normal'));
+}
+function toggleParticles(val) { showParticlesFlag = val; }
+
+// TABS
+// ═══════════════════════════════════════════
+
+function switchTab(name, btn) {
+  document.querySelectorAll('.tab-pane').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  if (btn) btn.classList.add('active');
+  // Close mobile nav
+  document.getElementById('main-header')?.classList.remove('nav-mobile-open');
+  if (name === 'office') {
+    officeRunning = true;
+    document.getElementById('btn-pause-office').textContent = '⏸ Pausar';
+    drawOfficeLoop();
+  } else {
+    officeRunning = false;
+    cancelAnimationFrame(officeAnim);
+  }
+}
+
+// ═══════════════════════════════════════════
+// MODALS
+// ═══════════════════════════════════════════
+
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) closeModal(m.id); });
+});
+
+// ═══════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════
+
+function syncProjectSelects() {
+  const opts = projects.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+  ['pg-project', 's-project'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = opts;
+  });
+}
+
+function copyText(text, msg, isEncoded) {
+  const str = isEncoded ? decodeURIComponent(text) : text;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(str).then(() => {
+      showToast(msg || '📋 Copiado');
+    }).catch(() => {
+      fallbackCopy(str, msg);
+    });
+  } else {
+    fallbackCopy(str, msg);
+  }
+}
+
+function fallbackCopy(str, msg) {
+  try {
+    const ta = document.createElement('textarea');
+    ta.value = str; ta.style.cssText = 'position:fixed;opacity:0;left:-9999px';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy');
+    document.body.removeChild(ta);
+    showToast(msg || '📋 Copiado');
+  } catch {
+    showToast('No se pudo copiar — seleccioná el texto manualmente');
+  }
+}
+
+let toastTimer;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ═══════════════════════════════════════════
+// MOBILE NAV
+// ═══════════════════════════════════════════
+
+function toggleMobileNav() {
+  document.getElementById('main-header').classList.toggle('nav-mobile-open');
+}
+
+// ═══════════════════════════════════════════
+// TOKEN PANEL (HEADER)
+// ═══════════════════════════════════════════
+
+function updateTokenPanel() {
+  const totalCost = sessions.reduce((a, s) => a + s.cost, 0);
+  const display = document.getElementById('token-total-display');
+  if (display) display.innerHTML = 'Gastado: <span>$' + totalCost.toFixed(2) + '</span>';
+
+  // 7-day bar chart
+  const chart = document.getElementById('token-mini-chart');
+  if (!chart) return;
+  const now = new Date();
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const dateStr = d.toISOString().slice(0, 10);
+    const dayCost = sessions.filter(s => s.date === dateStr).reduce((a, s) => a + s.cost, 0);
+    days.push(dayCost);
+  }
+  const maxCost = Math.max(...days, 0.01);
+  chart.innerHTML = days.map(c => {
+    const h = Math.max(2, (c / maxCost) * 24);
+    return `<div class="token-mini-bar" style="height:${h}px" title="$${c.toFixed(2)}"></div>`;
+  }).join('');
+}
+
+function quickAddSession(model) {
+  // Switch to costs tab and pre-fill model
+  switchTab('costs', document.querySelectorAll('.tab')[2]);
+  const modelSelect = document.getElementById('s-model');
+  if (modelSelect) modelSelect.value = model;
+  // Scroll to the form
+  document.getElementById('s-input')?.focus();
+  showToast('Ingresá los tokens para ' + (MODEL_PRICES[model]?.name || model));
+}
+
+// ═══════════════════════════════════════════
+// IA SELECTOR & {{VARIABLES}} SUPPORT
+// ═══════════════════════════════════════════
+
+let selectedIA = 'claude';
+
+function selectIA(btn) {
+  document.querySelectorAll('.ia-option').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  selectedIA = btn.dataset.ia;
+}
+
+function highlightVariables(text) {
+  return text.replace(/\{\{([^}]+)\}\}/g, '<span class="var-highlight">{{$1}}</span>');
+}
+
+// ═══════════════════════════════════════════
+// OFFICE BOTTOM BAR ACTIONS
+// ═══════════════════════════════════════════
+
+function openReportModal() { openModal('modal-report'); }
+function submitReport() {
+  const desc = document.getElementById('report-desc')?.value?.trim();
+  if (!desc) { showToast('Escribí una descripción del problema'); return; }
+  const agent = document.getElementById('report-agent')?.value || 'general';
+  showToast('✓ Reporte enviado sobre ' + (agent || 'problema general'));
+  closeModal('modal-report');
+  if (document.getElementById('report-desc')) document.getElementById('report-desc').value = '';
+}
+
+function startCall() {
+  showToast('📞 Llamada iniciada con el equipo de IAs');
+}
+
+function openSettingsModal() { openModal('modal-settings'); }
+
+function setOfficeSpeed(val) {
+  officeSpeed = parseFloat(val) || 1;
+  showToast('Velocidad: ' + (officeSpeed === 0.5 ? 'Lenta' : officeSpeed === 2 ? 'Rápida' : 'Normal'));
+}
+
+
+// ═══════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════
+
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('hdate').textContent =
+    new Date().toLocaleDateString('es-AR', {weekday:'long',day:'2-digit',month:'long'});
+
+  // Set today's date in cost form
+  document.getElementById('s-date').value = new Date().toISOString().slice(0,10);
+
+  loadProjects();
+  loadSessions();
+  loadSavedPrompts();
+
+  renderProjects();
+  renderCosts();
+  renderSavedPrompts();
+  renderQuickAsk();
+  initOffice();
+  updateTokenPanel();
+
+  syncProjectSelects();
+});
+</script>
+</body>
+</html>
