@@ -2123,6 +2123,7 @@ function updateTokenPanel() {
   chart.innerHTML = days.map(c => {
     const h = Math.max(2, (c / maxCost) * 24);
     return `<div class="token-mini-bar" style="height:${h}px" title="$${c.toFixed(2)}"></div>`;
+
   }).join('');
 }
 
@@ -2203,5 +2204,35 @@ document.addEventListener('DOMContentLoaded', () => {
   syncProjectSelects();
 });
 </script>
+<!-- ════════════ MODAL: PROJECT PROMPT ════════════ -->
+<div class="modal-overlay" id="modal-project-prompt">
+  <div class="modal-box" style="max-width:520px">
+    <button class="modal-close" onclick="closeModal('modal-project-prompt')">✕</button>
+    <div class="modal-title" id="project-prompt-title">💬 Generar Super Prompt</div>
+    <div id="project-prompt-info" style="color:var(--text2);font-size:12px;margin-bottom:12px;padding:8px 12px;background:var(--bg3);border-radius:6px"></div>
+    <div class="form-group">
+      <label>¿Qué querés hacer?</label>
+      <textarea id="project-prompt-request" rows="4" placeholder="Ej: Agregar modo oscuro, arreglar bug en el canvas, agregar nuevo tab..."></textarea>
+    </div>
+    <div class="form-group">
+      <label>Tono</label>
+      <select id="project-prompt-tone">
+        <option value="casual">Casual — charla normal</option>
+        <option value="technical">Técnico — con detalle y ejemplos</option>
+        <option value="creative">Creativo — pensá fuera de la caja</option>
+        <option value="concise">Directo — respuesta al punto</option>
+      </select>
+    </div>
+    <div class="form-group" style="display:flex;align-items:center;gap:8px">
+      <input type="checkbox" id="project-prompt-context" checked>
+      <label for="project-prompt-context" style="margin:0;font-size:13px">Incluir link al contexto del repo (Gitingest)</label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="closeModal('modal-project-prompt')">Cancelar</button>
+      <button class="btn btn-primary" onclick="generateSuperPrompt()">✨ Generar Super Prompt</button>
+    </div>
+  </div>
+</div>
+
 </body>
 </html>
